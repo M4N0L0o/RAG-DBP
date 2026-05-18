@@ -1,0 +1,13 @@
+# Entorno virtual
+venv/
+.venv/
+env/
+
+# Archivos temporales de Python
+__pycache__/
+*.pyc
+
+# Base de datos vectorial (ChromaDB) - opcional
+# Si quieres que otros tengan tus datos, no la ignores. 
+# Pero por ahora, mejor ignórala para no saturar GitHub:
+chroma_db/
