@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administración RAG | NEXUS-7</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Fondo corporativo claro */
+        body { background-color: #f3f4f6; }
+        
+        /* Animación para toasts */
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .toast-enter { animation: slideIn 0.3s ease-out forwards; }
+    </style>
+</head>
+<body class="text-[#17243d] font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Navbar Primaria (#17243d) -->
+    <nav class="bg-[#17243d] text-white p-4 shadow-lg sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <i data-lucide="database" class="w-6 h-6 text-[#ff0000]"></i>
+                <h1 class="text-xl font-bold tracking-wider">Panel Administrativo RAG</h1>
+            </div>
+            <!-- Enlace de regreso al Asistente -->
+            <a href="index.html" class="flex items-center gap-2 text-sm text-gray-300 hover:text-white transition-colors bg-white/10 px-4 py-2 rounded-lg">
+                <i data-lucide="monitor" class="w-4 h-4"></i>
+                <span>Ver Asistente 3D</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Contenido Principal -->
+    <main class="flex-1 max-w-5xl w-full mx-auto p-6 md:p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Columna Izquierda: Subida de Archivos -->
+        <section class="lg:col-span-1 space-y-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center gap-3 border-b border-gray-100 pb-4 mb-4">
+                    <div class="p-2 bg-[#17243d]/10 text-[#17243d] rounded-lg">
+                        <i data-lucide="upload-cloud" class="w-5 h-5"></i>
+                    </div>
+                    <h2 class="text-lg font-semibold">Cargar Conocimiento</h2>
+                </div>
+                
+                <p class="text-sm text-gray-500 mb-6">
+                    Sube archivos de texto plano (.txt) para alimentar el contexto de NEXUS-7. El sistema fragmentará y vectorizará el documento automáticamente.
+                </p>
+
+                <form id="upload-form" class="space-y-4">
+                    <!-- Dropzone / Input -->
+                    <div class="relative border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:bg-gray-50 transition-colors cursor-pointer group" id="dropzone">
+                        <input type="file" id="file-input" accept=".txt" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" required>
+                        <i data-lucide="file-text" class="w-8 h-8 mx-auto text-gray-400 group-hover:text-[#17243d] mb-2 transition-colors"></i>
+                        <p id="file-name-display" class="text-sm font-medium text-gray-700">Haz clic o arrastra un archivo .txt aquí</p>
+                    </div>
+
+                    <!-- Botón Enviar (Color Primario) -->
+                    <button type="submit" id="submit-btn" class="w-full flex items-center justify-center gap-2 bg-[#17243d] hover:bg-[#20325c] text-white py-3 rounded-xl font-medium transition-colors shadow-md shadow-[#17243d]/20 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i data-lucide="cpu" class="w-4 h-4"></i>
+                        <span>Procesar e Indexar</span>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Columna Derecha: Lista de Documentos -->
+        <section class="lg:col-span-2">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-0 overflow-hidden flex flex-col h-full">
+                <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-emerald-500/10 text-emerald-600 rounded-lg">
+                            <i data-lucide="server" class="w-5 h-5"></i>
+                        </div>
+                        <h2 class="text-lg font-semibold">Base de Datos Vectorial</h2>
+                    </div>
+                    <button onclick="fetchDocuments()" class="text-gray-400 hover:text-[#17243d] transition-colors" title="Actualizar lista">
+                        <i data-lucide="refresh-cw" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                
+                <!-- Contenedor de la lista -->
+                <div class="flex-1 overflow-y-auto p-4 bg-white min-h-[300px]">
+                    <div id="loading-state" class="flex flex-col items-center justify-center h-full text-gray-400">
+                        <i data-lucide="loader-2" class="w-8 h-8 animate-spin mb-3 text-[#17243d]"></i>
+                        <p class="text-sm">Conectando con ChromaDB...</p>
+                    </div>
+
+                    <div id="empty-state" class="hidden flex flex-col items-center justify-center h-full text-gray-400">
+                        <i data-lucide="folder-open" class="w-12 h-12 mb-3 text-gray-300"></i>
+                        <p class="text-sm">No hay documentos en el contexto.</p>
+                        <p class="text-xs mt-1">Sube tu primer archivo para entrenar al asistente.</p>
+                    </div>
+
+                    <ul id="documents-list" class="space-y-3 hidden">
+                        <!-- Los items se inyectan mediante JS -->
+                    </ul>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Contenedor de Alertas (Toasts) -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-3"></div>
+
+    <script>
+        lucide.createIcons();
+
+        const API_BASE = "http://localhost:8000/api/documents";
+        
+        // Elementos del DOM
+        const documentsList = document.getElementById('documents-list');
+        const loadingState = document.getElementById('loading-state');
+        const emptyState = document.getElementById('empty-state');
+        const fileInput = document.getElementById('file-input');
+        const fileNameDisplay = document.getElementById('file-name-display');
+        const uploadForm = document.getElementById('upload-form');
+        const submitBtn = document.getElementById('submit-btn');
+
+        // Lógica de UI para el Input File
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                const file = e.target.files[0];
+                if (!file.name.endsWith('.txt')) {
+                    showToast('Solo se permiten archivos de texto (.txt)', 'error');
+                    fileInput.value = '';
+                    fileNameDisplay.textContent = 'Haz clic o arrastra un archivo .txt aquí';
+                    return;
+                }
+                fileNameDisplay.textContent = file.name;
+                fileNameDisplay.classList.replace('text-gray-700', 'text-[#17243d]');
+                fileNameDisplay.classList.add('font-bold');
+            } else {
+                fileNameDisplay.textContent = 'Haz clic o arrastra un archivo .txt aquí';
+                fileNameDisplay.classList.remove('font-bold', 'text-[#17243d]');
+            }
+        });
+
+        // Obtener documentos
+        async function fetchDocuments() {
+            loadingState.classList.remove('hidden');
+            documentsList.classList.add('hidden');
+            emptyState.classList.add('hidden');
+
+            try {
+                const response = await fetch(API_BASE);
+                if (!response.ok) throw new Error('Error al conectar con la API');
+                
+                const data = await response.json();
+                renderDocuments(data.documents);
+            } catch (error) {
+                console.error(error);
+                showToast('Error cargando los documentos', 'error');
+                loadingState.classList.add('hidden');
+            }
+        }
+
+        // Renderizar lista de documentos
+        function renderDocuments(files) {
+            loadingState.classList.add('hidden');
+            documentsList.innerHTML = '';
+
+            if (files.length === 0) {
+                emptyState.classList.remove('hidden');
+                documentsList.classList.add('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            documentsList.classList.remove('hidden');
+
+            files.forEach(file => {
+                const li = document.createElement('li');
+                li.className = 'flex items-center justify-between p-4 bg-gray-50 border border-gray-100 rounded-xl hover:shadow-md transition-shadow group';
+                
+                li.innerHTML = `
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <div class="p-2 bg-white rounded-lg shadow-sm text-[#17243d]">
+                            <i data-lucide="file-text" class="w-5 h-5"></i>
+                        </div>
+                        <span class="font-medium text-gray-800 truncate">${file}</span>
+                    </div>
+                    <button onclick="deleteDocument('${file}')" class="p-2 text-gray-400 hover:text-white hover:bg-[#ff0000] rounded-lg transition-colors" title="Eliminar de la BD">
+                        <i data-lucide="trash-2" class="w-5 h-5"></i>
+                    </button>
+                `;
+                documentsList.appendChild(li);
+            });
+            lucide.createIcons();
+        }
+
+        // Subir documento
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            // Estado de carga
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Indexando en ChromaDB...</span>';
+            lucide.createIcons();
+
+            try {
+                const response = await fetch(API_BASE, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (!response.ok) throw new Error(result.detail || 'Error al subir archivo');
+
+                showToast(result.message, 'success');
+                
+                // Limpiar form y actualizar lista
+                fileInput.value = '';
+                fileNameDisplay.textContent = 'Haz clic o arrastra un archivo .txt aquí';
+                fileNameDisplay.classList.remove('font-bold', 'text-[#17243d]');
+                fetchDocuments();
+
+            } catch (error) {
+                console.error(error);
+                showToast(error.message, 'error');
+            } finally {
+                // Restaurar botón
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i data-lucide="cpu" class="w-4 h-4"></i><span>Procesar e Indexar</span>';
+                lucide.createIcons();
+            }
+        });
+
+        // Eliminar documento
+        async function deleteDocument(filename) {
+            if (!confirm(`¿Estás seguro de que deseas eliminar "${filename}"? \nNEXUS-7 olvidará toda la información contenida en él.`)) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/${filename}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (!response.ok) throw new Error(result.detail || 'Error al eliminar archivo');
+
+                showToast(result.message, 'success');
+                fetchDocuments();
+
+            } catch (error) {
+                console.error(error);
+                showToast(error.message, 'error');
+            }
+        }
+
+        // Sistema de Notificaciones (Toasts)
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            const isSuccess = type === 'success';
+            const bgColor = isSuccess ? 'bg-[#17243d]' : 'bg-[#ff0000]';
+            const icon = isSuccess ? 'check-circle' : 'alert-circle';
+
+            toast.className = `flex items-center gap-3 ${bgColor} text-white px-5 py-4 rounded-xl shadow-xl toast-enter max-w-sm`;
+            toast.innerHTML = `
+                <i data-lucide="${icon}" class="w-5 h-5 flex-shrink-0"></i>
+                <p class="text-sm font-medium leading-snug">${message}</p>
+            `;
+            
+            container.appendChild(toast);
+            lucide.createIcons();
+
+            // Auto-destrucción
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                toast.style.transition = 'all 0.3s ease-in';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // Inicializar
+        fetchDocuments();
+    </script>
+</body>
+</html>

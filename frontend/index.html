@@ -11,39 +11,41 @@
     <!-- Lucide Icons para el botón de audio -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #05050a; }
+        /* Fondo Blanco del entorno 3D */
+        body { margin: 0; overflow: hidden; background-color: #ffffff; }
         #canvas-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; }
         
-        /* Barra de desplazamiento personalizada */
+        /* Barra de desplazamiento personalizada (Acentos Primarios) */
         ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
-        ::-webkit-scrollbar-thumb { background: #06b6d4; border-radius: 10px; }
+        ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.05); }
+        ::-webkit-scrollbar-thumb { background: #17243d; border-radius: 10px; }
         
-        /* Animaciones */
-        @keyframes pulse-glow {
-            0%, 100% { box-shadow: 0 0 5px #22d3ee, 0 0 10px #22d3ee; }
-            50% { box-shadow: 0 0 2px #22d3ee, 0 0 5px #22d3ee; }
+        /* Animaciones para Procesando (Rojo) */
+        @keyframes pulse-red {
+            0%, 100% { box-shadow: 0 0 5px #ff0000, 0 0 10px #ff0000; }
+            50% { box-shadow: 0 0 2px #ff0000, 0 0 5px #ff0000; }
         }
-        .status-dot { animation: pulse-glow 2s infinite; }
+        .status-processing { animation: pulse-red 2s infinite; background-color: #ff0000 !important; }
         
+        /* Cursor de tipeo blanco (para fondo azul) */
         .typing-cursor::after {
             content: '█';
             animation: blink 1s step-start infinite;
-            color: #06b6d4;
+            color: #ffffff;
             margin-left: 2px;
         }
         @keyframes blink { 50% { opacity: 0; } }
 
-        /* Efecto de voz activa (ondas) */
+        /* Efecto de voz activa (ondas en Azul/Primario) */
         @keyframes speaking-pulse {
-            0% { transform: scale(1); opacity: 0.8; }
-            50% { transform: scale(1.1); opacity: 1; }
-            100% { transform: scale(1); opacity: 0.8; }
+            0% { transform: scale(1); opacity: 0.8; box-shadow: 0 0 5px #17243d; }
+            50% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 10px #17243d; }
+            100% { transform: scale(1); opacity: 0.8; box-shadow: 0 0 5px #17243d; }
         }
-        .is-speaking .status-dot { animation: speaking-pulse 0.3s infinite alternate; background-color: #a855f7; box-shadow: 0 0 10px #a855f7; }
+        .is-speaking .status-dot { animation: speaking-pulse 0.3s infinite alternate; background-color: #17243d !important; }
     </style>
 </head>
-<body class="relative font-sans antialiased text-white h-screen w-screen flex flex-col md:flex-row">
+<body class="relative font-sans antialiased text-[#17243d] h-screen w-screen flex flex-col md:flex-row">
 
     <!-- Contenedor del Avatar 3D -->
     <div id="canvas-container"></div>
@@ -51,29 +53,31 @@
     <!-- Interfaz de Usuario (UI) superpuesta -->
     <div class="relative z-10 w-full md:w-1/3 max-w-md h-full ml-auto p-4 md:p-6 flex flex-col justify-end md:justify-center pointer-events-none">
         
-        <!-- Panel de Chat -->
-        <div class="bg-gray-900/70 backdrop-blur-md border border-cyan-500/30 rounded-2xl p-4 shadow-2xl shadow-cyan-900/20 pointer-events-auto flex flex-col h-[70vh] md:h-[80vh] transition-all">
+        <!-- Panel de Chat (Fondo ligeramente gris/blanco oscuro para resaltar del fondo blanco puro) -->
+        <div class="bg-[#f3f4f6]/95 backdrop-blur-md border border-gray-200 rounded-2xl p-4 shadow-2xl shadow-black/10 pointer-events-auto flex flex-col h-[70vh] md:h-[80vh] transition-all">
             
             <!-- Cabecera del Asistente -->
-            <div id="header-container" class="flex items-center justify-between border-b border-cyan-500/30 pb-4 mb-4 transition-colors">
+            <div id="header-container" class="flex items-center justify-between border-b border-gray-200 pb-4 mb-4 transition-colors">
                 <div class="flex items-center gap-3">
-                    <div id="status-indicator" class="w-3 h-3 bg-cyan-400 rounded-full status-dot transition-colors duration-300"></div>
+                    <!-- Punto de estado (Verde en reposo) -->
+                    <div id="status-indicator" class="w-3 h-3 rounded-full bg-emerald-500 status-dot transition-colors duration-300"></div>
                     <div>
-                        <h2 class="text-xl font-bold text-cyan-400 tracking-wider m-0 leading-tight">NEXUS-7</h2>
-                        <p id="status-text" class="text-xs text-gray-400 font-mono">En línea - Modo CPU</p>
+                        <h2 class="text-xl font-bold text-[#17243d] tracking-wider m-0 leading-tight">NEXUS-7</h2>
+                        <p id="status-text" class="text-xs text-gray-500 font-mono">En línea - Modo CPU</p>
                     </div>
                 </div>
-                <!-- Botón de Audio Toggle -->
-                <button id="audio-toggle" class="p-2 rounded-full hover:bg-gray-800 transition-colors text-gray-400 hover:text-cyan-400" title="Activar/Desactivar Voz">
-                    <i data-lucide="volume-x" id="audio-icon"></i>
+                <!-- Botón de Audio Toggle (Activado por defecto, color Primario) -->
+                <button id="audio-toggle" class="p-2 rounded-full hover:bg-gray-200 transition-colors text-[#17243d]" title="Activar/Desactivar Voz">
+                    <i data-lucide="volume-2" id="audio-icon"></i>
                 </button>
             </div>
 
             <!-- Historial de Chat -->
             <div id="chat-history" class="flex-1 overflow-y-auto space-y-4 mb-4 pr-2 flex flex-col">
                 <div class="flex justify-start">
-                    <div class="bg-cyan-950/60 text-cyan-50 rounded-2xl rounded-tl-none px-4 py-3 text-sm border border-cyan-500/30 shadow-sm max-w-[90%]">
-                        Saludos. Soy NEXUS-7. Puedes activar mi módulo de voz usando el icono del altavoz en la parte superior.
+                    <!-- Burbuja Bot Inicial (Primario: #17243d, Texto Blanco) -->
+                    <div class="bg-[#17243d] text-white rounded-2xl rounded-tl-none px-4 py-3 text-sm shadow-sm max-w-[90%]">
+                        Saludos. Soy NEXUS-7. Mi módulo de voz está habilitado por defecto para asistirte en el Metaverso del DBP.
                     </div>
                 </div>
             </div>
@@ -81,11 +85,20 @@
             <!-- Input de Usuario -->
             <div class="relative flex items-center mt-auto">
                 <input id="user-input" type="text" 
-                    class="w-full bg-gray-800/80 border border-gray-600 rounded-xl py-3 pl-4 pr-12 text-sm text-white focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all placeholder-gray-500"
+                    class="w-full bg-white border border-gray-300 rounded-xl py-3 pl-4 pr-12 text-sm text-gray-900 focus:outline-none focus:border-[#17243d] focus:ring-1 focus:ring-[#17243d] transition-all placeholder-gray-400 shadow-sm"
                     placeholder="Escribe tu consulta aquí..." 
                     autocomplete="off">
-                <button id="send-btn" class="absolute right-2 p-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition-colors flex items-center justify-center">
-                    <i data-lucide="send" class="w-4 h-4"></i>
+                <!-- Botón de Enviar (Primario por defecto) -->
+                <button id="send-btn" class="absolute right-2 p-2 bg-[#17243d] hover:bg-[#20325c] text-white rounded-lg transition-colors flex items-center justify-center">
+                    <!-- Icono para Enviar (SVG Crudo) -->
+                    <svg id="icon-send" class="w-4 h-4 block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                    <!-- Icono para Detener (SVG Crudo) -->
+                    <svg id="icon-stop" class="w-4 h-4 hidden fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    </svg>
                 </button>
             </div>
         </div>
@@ -98,17 +111,17 @@
         // ==========================================
         // 1. CONFIGURACIÓN DE VOZ (TEXT-TO-SPEECH)
         // ==========================================
-        let isAudioEnabled = false;
+        let isAudioEnabled = true; // ACTIVADO POR DEFECTO
         let ttsVoice = null;
         const synth = window.speechSynthesis;
         const audioToggleBtn = document.getElementById('audio-toggle');
-        const audioIcon = document.getElementById('audio-icon');
         const headerContainer = document.getElementById('header-container');
 
-        // Cargar voces disponibles (el navegador las carga asíncronamente)
+        let activeBubble = null; 
+        window.utterances = []; 
+
         function loadVoices() {
             const voices = synth.getVoices();
-            // Buscar una voz en español (preferiblemente que suene a IA/Asistente)
             ttsVoice = voices.find(v => v.lang.includes('es') && (v.name.includes('Google') || v.name.includes('Microsoft'))) || 
                        voices.find(v => v.lang.includes('es')) || 
                        voices[0];
@@ -118,35 +131,43 @@
             speechSynthesis.onvoiceschanged = loadVoices;
         }
 
-        // Toggle para activar/desactivar audio
         audioToggleBtn.addEventListener('click', () => {
             isAudioEnabled = !isAudioEnabled;
             if (isAudioEnabled) {
-                audioToggleBtn.innerHTML = '<i data-lucide="volume-2" class="text-cyan-400"></i>';
-                // Pequeño truco para desbloquear el motor de audio en navegadores estrictos
+                audioToggleBtn.innerHTML = '<i data-lucide="volume-2" class="text-[#17243d]"></i>';
                 const unlockMsg = new SpeechSynthesisUtterance('');
                 synth.speak(unlockMsg);
             } else {
                 audioToggleBtn.innerHTML = '<i data-lucide="volume-x" class="text-gray-400"></i>';
-                synth.cancel(); // Detener si estaba hablando
+                synth.cancel();
             }
             lucide.createIcons();
         });
 
-        // Función para hablar una oración
-        function speakSentence(text) {
-            if (!isAudioEnabled || !text.trim()) return;
+        function speakSentence(text, bubble) {
+            if (!isAudioEnabled || !text.trim()) {
+                return;
+            }
             
-            const utterance = new SpeechSynthesisUtterance(text.trim());
+            const utterance = new SpeechSynthesisUtterance(text);
+            window.utterances.push(utterance); 
+
             if (ttsVoice) utterance.voice = ttsVoice;
             
-            // Ajustes para que suene más como un asistente robótico/futurista
-            utterance.pitch = 0.9; // Tono ligeramente más grave
-            utterance.rate = 1.05; // Ligeramente más rápido
+            utterance.pitch = 0.9;
+            utterance.rate = 1.05;
             
-            // Efectos visuales de hablando
-            utterance.onstart = () => headerContainer.classList.add('is-speaking');
-            utterance.onend = () => headerContainer.classList.remove('is-speaking');
+            utterance.onstart = () => {
+                headerContainer.classList.add('is-speaking');
+                displayQueue += text;
+            };
+
+            utterance.onend = () => {
+                window.utterances = window.utterances.filter(u => u !== utterance);
+                if (!synth.speaking && !synth.pending) {
+                    headerContainer.classList.remove('is-speaking');
+                }
+            };
             
             synth.speak(utterance);
         }
@@ -162,38 +183,39 @@
         renderer.setPixelRatio(window.devicePixelRatio);
         document.getElementById('canvas-container').appendChild(renderer.domElement);
 
+        // Material ajustado para contrastar con el fondo Blanco (#ffffff)
+        // Usamos el color Primario (#17243d) para el wireframe en estado base
         const material = new THREE.MeshStandardMaterial({ 
-            color: 0x00ffff, wireframe: true, emissive: 0x00aaff, emissiveIntensity: 0.6, transparent: true, opacity: 0.9
+            color: 0x17243d, 
+            wireframe: true, 
+            emissive: 0x0a111d, 
+            emissiveIntensity: 0.5, 
+            transparent: true, 
+            opacity: 0.9
         });
         
-        // --- NUEVO AVATAR: MASCOTA DBP (Estructura Geométrica) ---
         const nexusAvatar = new THREE.Group();
 
-        // Cuerpo
         const bodyGeo = new THREE.BoxGeometry(1.5, 1.2, 2.2);
         const body = new THREE.Mesh(bodyGeo, material);
         nexusAvatar.add(body);
 
-        // Cabeza
         const headGeo = new THREE.BoxGeometry(1.2, 1.2, 1.2);
         const head = new THREE.Mesh(headGeo, material);
         head.position.set(0, 1, 1);
         nexusAvatar.add(head);
 
-        // Orejas
         const earGeo = new THREE.ConeGeometry(0.3, 0.8, 4);
         const earL = new THREE.Mesh(earGeo, material); earL.position.set(-0.4, 1.8, 1);
         const earR = new THREE.Mesh(earGeo, material); earR.position.set(0.4, 1.8, 1);
         nexusAvatar.add(earL); nexusAvatar.add(earR);
 
-        // Cola
         const tailGeo = new THREE.CylinderGeometry(0.1, 0.1, 1.2);
         const tail = new THREE.Mesh(tailGeo, material);
         tail.position.set(0, 0.6, -1.2);
         tail.rotation.x = Math.PI / 4;
         nexusAvatar.add(tail);
 
-        // Patas
         const legGeo = new THREE.BoxGeometry(0.4, 1, 0.4);
         const legFL = new THREE.Mesh(legGeo, material); legFL.position.set(-0.5, -0.8, 0.7);
         const legFR = new THREE.Mesh(legGeo, material); legFR.position.set(0.5, -0.8, 0.7);
@@ -203,34 +225,12 @@
 
         scene.add(nexusAvatar);
 
-        /* // =================================================================
-        // CÓDIGO FUTURO PARA CARGAR EL MODELO 3D REAL (.GLTF o .GLB) DEL DBP
-        // =================================================================
-        // 1. Añade esto en el <head> de tu HTML: 
-        // <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"> (AQUI CERRAR SCRIPT)
-        //
-        // 2. Comenta o borra todo el bloque de "NUEVO AVATAR: MASCOTA DBP" de arriba.
-        //
-        // 3. Descomenta este bloque:
-        // const loader = new THREE.GLTFLoader();
-        // let nexusAvatar = new THREE.Group();
-        // scene.add(nexusAvatar);
-        // loader.load('ruta/a/tu/mascota_dbp.glb', function(gltf) {
-        //     scene.remove(nexusAvatar); 
-        //     nexusAvatar = gltf.scene;
-        //     nexusAvatar.traverse((child) => {
-        //         if (child.isMesh) child.material = material; // Aplica el estilo holográfico
-        //     });
-        //     scene.add(nexusAvatar);
-        // });
-        */
-
-        const ambientLight = new THREE.AmbientLight(0x202040); scene.add(ambientLight);
-        const pointLight = new THREE.PointLight(0x00ffff, 2, 50);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8); scene.add(ambientLight);
+        const pointLight = new THREE.PointLight(0x17243d, 2, 50);
         pointLight.position.set(5, 5, 5); scene.add(pointLight);
 
         camera.position.z = 8;
-        camera.position.y = 1; // Subimos un poco la cámara para ver mejor a la mascota
+        camera.position.y = 1; 
         
         function adjustLayout() {
             if (window.innerWidth > 768) { nexusAvatar.position.x = -3; } 
@@ -245,24 +245,23 @@
             requestAnimationFrame(animate);
             time += 0.01;
             
-            // Movimientos idle de la mascota
-            nexusAvatar.rotation.y = Math.sin(time * 0.5) * 0.3; // Mira suavemente de lado a lado
-            nexusAvatar.position.y = Math.sin(time * 2) * 0.05; // Flota ligeramente
-            tail.rotation.z = Math.sin(time * 10) * 0.2; // Mueve la cola suavemente
+            nexusAvatar.rotation.y = Math.sin(time * 0.5) * 0.3; 
+            nexusAvatar.position.y = Math.sin(time * 2) * 0.05; 
+            tail.rotation.z = Math.sin(time * 10) * 0.2; 
 
             if (isProcessing) {
-                // Estado: Pensando
-                tail.rotation.z = Math.sin(time * 25) * 0.5; // Mueve la cola rápido
-                nexusAvatar.rotation.y += 0.05; // Da vueltas de emoción
-                material.color.setHex(0xff8800); material.emissive.setHex(0xff5500); pointLight.color.setHex(0xff8800);
+                tail.rotation.z = Math.sin(time * 25) * 0.5; 
+                nexusAvatar.rotation.y += 0.05; 
+                // Color Rojo reservado para Procesamiento
+                material.color.setHex(0xff0000); material.emissive.setHex(0x990000); pointLight.color.setHex(0xff0000);
             } else if (headerContainer.classList.contains('is-speaking')) {
-                // Estado: Hablando (Morado)
-                head.rotation.x = Math.sin(time * 15) * 0.1; // Asiente con la cabeza al hablar
-                material.color.setHex(0xa855f7); material.emissive.setHex(0x9333ea); pointLight.color.setHex(0xa855f7);
+                head.rotation.x = Math.sin(time * 15) * 0.1; 
+                // Hablar: Color azul medio para variar
+                material.color.setHex(0x3b82f6); material.emissive.setHex(0x2563eb); pointLight.color.setHex(0x3b82f6);
             } else {
-                // Estado: Reposo
                 head.rotation.x = 0;
-                material.color.setHex(0x00ffff); material.emissive.setHex(0x00aaff); pointLight.color.setHex(0x00ffff);
+                // Color Primario para Reposo
+                material.color.setHex(0x17243d); material.emissive.setHex(0x0a111d); pointLight.color.setHex(0x17243d);
             }
             renderer.render(scene, camera);
         }
@@ -279,13 +278,20 @@
         const chatHistory = document.getElementById('chat-history');
         const userInput = document.getElementById('user-input');
         const sendBtn = document.getElementById('send-btn');
+        const iconSend = document.getElementById('icon-send');
+        const iconStop = document.getElementById('icon-stop');
         const statusIndicator = document.getElementById('status-indicator');
         const statusText = document.getElementById('status-text');
+
+        let currentAbortController = null;
+        let displayQueue = ""; 
+        let typingInterval = null; 
 
         function addUserMessage(text) {
             const wrapper = document.createElement('div'); wrapper.className = 'flex justify-end';
             const bubble = document.createElement('div');
-            bubble.className = 'bg-cyan-600 text-white rounded-2xl rounded-tr-none px-4 py-3 text-sm max-w-[85%] shadow-md';
+            // Burbuja de Usuario: Blanco con sombra y texto negro
+            bubble.className = 'bg-white text-gray-900 border border-gray-100 rounded-2xl rounded-tr-none px-4 py-3 text-sm max-w-[85%] shadow-md';
             bubble.textContent = text; wrapper.appendChild(bubble); chatHistory.appendChild(wrapper);
             chatHistory.scrollTop = chatHistory.scrollHeight;
         }
@@ -293,34 +299,86 @@
         function createBotMessageBubble() {
             const wrapper = document.createElement('div'); wrapper.className = 'flex justify-start';
             const bubble = document.createElement('div');
-            bubble.className = 'bg-cyan-950/60 text-cyan-50 rounded-2xl rounded-tl-none px-4 py-3 text-sm border border-cyan-500/30 max-w-[85%] shadow-sm typing-cursor min-h-[44px]';
+            // Burbuja Bot: Color primario con texto blanco
+            bubble.className = 'bg-[#17243d] text-white rounded-2xl rounded-tl-none px-4 py-3 text-sm max-w-[85%] shadow-sm typing-cursor min-h-[44px]';
             wrapper.appendChild(bubble); chatHistory.appendChild(wrapper); chatHistory.scrollTop = chatHistory.scrollHeight;
             return bubble;
         }
 
         async function sendMessage() {
-            const text = userInput.value.trim();
-            if (!text || isProcessing) return;
+            if (isProcessing) {
+                if (currentAbortController) {
+                    currentAbortController.abort();
+                }
+                synth.cancel();
+                displayQueue = ""; 
+                if (typingInterval) clearInterval(typingInterval);
+                headerContainer.classList.remove('is-speaking'); 
+                if (activeBubble) activeBubble.classList.remove('typing-cursor');
+                return;
+            }
 
-            // Detener cualquier voz anterior si el usuario interrumpe
+            const text = userInput.value.trim();
+            if (!text) return;
+
             if (isAudioEnabled) synth.cancel();
 
             addUserMessage(text);
             userInput.value = '';
             
             isProcessing = true;
-            statusIndicator.classList.replace('bg-cyan-400', 'bg-orange-500');
+            // Estado procesando: Puntos y textos Rojos
+            statusIndicator.classList.remove('bg-emerald-500');
+            statusIndicator.classList.add('status-processing');
             statusText.textContent = 'Procesando (Pensando)...';
-            statusText.classList.replace('text-gray-400', 'text-orange-400');
+            statusText.classList.replace('text-gray-500', 'text-[#ff0000]');
 
-            const botBubble = createBotMessageBubble();
-            let speechBuffer = ""; // Buffer para armar oraciones completas
+            // Botón de Detener (Rojo reservado)
+            sendBtn.classList.replace('bg-[#17243d]', 'bg-[#ff0000]');
+            sendBtn.classList.replace('hover:bg-[#20325c]', 'hover:bg-[#cc0000]');
+            iconSend.classList.replace('block', 'hidden');
+            iconStop.classList.replace('hidden', 'block');
+
+            activeBubble = createBotMessageBubble();
+            let speechBuffer = "";
+            displayQueue = ""; 
+
+            if (typingInterval) clearInterval(typingInterval);
+            
+            const typeSpeedVoiceOn = 50;  
+            const typeSpeedVoiceOff = 20; 
+            const typeSpeed = isAudioEnabled ? typeSpeedVoiceOn : typeSpeedVoiceOff;
+            
+            typingInterval = setInterval(() => {
+                if (displayQueue.length > 0) {
+                    let charsToType = 1;
+                    
+                    if (!isAudioEnabled) {
+                        charsToType = displayQueue.length > 60 ? 3 : (displayQueue.length > 30 ? 2 : 1);
+                    } else {
+                        charsToType = displayQueue.length > 100 ? 2 : 1; 
+                    }
+                    
+                    activeBubble.textContent += displayQueue.substring(0, charsToType);
+                    displayQueue = displayQueue.substring(charsToType);
+                    chatHistory.scrollTop = chatHistory.scrollHeight;
+                } else if (!isProcessing) {
+                    if (!isAudioEnabled || (!synth.speaking && !synth.pending)) {
+                        activeBubble.classList.remove('typing-cursor');
+                        clearInterval(typingInterval);
+                        typingInterval = null;
+                    }
+                }
+            }, typeSpeed);
+
+            currentAbortController = new AbortController();
 
             try {
                 const response = await fetch('http://localhost:8000/chat/stream', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ pregunta: text, session_id: "sesion_default" })
+                    body: JSON.stringify({ pregunta: text, session_id: "sesion_default" }),
+                    signal: currentAbortController.signal 
                 });
 
                 if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
@@ -345,9 +403,10 @@
                                 
                                 if (dataStr === '[DONE]') {
                                     done = true;
-                                    // Hablar lo que haya quedado en el buffer al final
-                                    if (speechBuffer.trim()) {
-                                        speakSentence(speechBuffer);
+                                    if (isAudioEnabled && speechBuffer.trim()) {
+                                        speakSentence(speechBuffer, activeBubble);
+                                    } else if (!isAudioEnabled && speechBuffer.trim()){
+                                        displayQueue += speechBuffer;
                                     }
                                     break;
                                 }
@@ -357,16 +416,16 @@
                                         const dataJson = JSON.parse(dataStr);
                                         if (dataJson.respuesta) {
                                             const token = dataJson.respuesta;
-                                            botBubble.textContent += token;
-                                            speechBuffer += token;
-                                            chatHistory.scrollTop = chatHistory.scrollHeight;
-
-                                            // Expresión regular: Detectar fin de oración (punto, interrogación, exclamación seguido de espacio)
-                                            // Esto permite hablar por oraciones mientras el LLM sigue generando la siguiente
-                                            const match = speechBuffer.match(/([^.!?]+[.!?]+)(\s|$)/);
-                                            if (match) {
-                                                speakSentence(match[1]);
-                                                speechBuffer = speechBuffer.slice(match[0].length); // Limpiar buffer procesado
+                                            
+                                            if (isAudioEnabled) {
+                                                speechBuffer += token;
+                                                const match = speechBuffer.match(/([^.!?]+[.!?]+)(\s|$)/);
+                                                if (match) {
+                                                    speakSentence(match[1], activeBubble);
+                                                    speechBuffer = speechBuffer.slice(match[0].length); 
+                                                }
+                                            } else {
+                                                displayQueue += token;
                                             }
                                         }
                                     } catch (e) {
@@ -378,19 +437,42 @@
                     }
                 }
             } catch (error) {
-                console.error("Error de conexión:", error);
-                botBubble.textContent += " [⚠️ Error de conexión]";
+                if (error.name === 'AbortError') {
+                    console.log("Petición de streaming cancelada por el usuario.");
+                    displayQueue = ""; 
+                    activeBubble.textContent += " [🛑 Respuesta cancelada]";
+                } else {
+                    console.error("Error de conexión:", error);
+                    activeBubble.textContent += " [⚠️ Error de conexión]";
+                }
             } finally {
                 isProcessing = false;
-                botBubble.classList.remove('typing-cursor');
-                statusIndicator.classList.replace('bg-orange-500', 'bg-cyan-400');
+                currentAbortController = null;
+                
+                // Restaurar estado a inactivo (Verde y colores normales)
+                statusIndicator.classList.remove('status-processing');
+                statusIndicator.classList.add('bg-emerald-500');
                 statusText.textContent = 'En línea - Modo CPU';
-                statusText.classList.replace('text-orange-400', 'text-gray-400');
+                statusText.classList.replace('text-[#ff0000]', 'text-gray-500');
+
+                if (isAudioEnabled && !synth.speaking && !synth.pending) {
+                     headerContainer.classList.remove('is-speaking');
+                }
+
+                // Restaurar Botón de Enviar a Primario
+                sendBtn.classList.replace('bg-[#ff0000]', 'bg-[#17243d]');
+                sendBtn.classList.replace('hover:bg-[#cc0000]', 'hover:bg-[#20325c]');
+                iconStop.classList.replace('block', 'hidden');
+                iconSend.classList.replace('hidden', 'block');
             }
         }
 
         sendBtn.addEventListener('click', sendMessage);
-        userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+        userInput.addEventListener('keypress', (e) => { 
+            if (e.key === 'Enter' && !isProcessing) {
+                sendMessage(); 
+            }
+        });
     </script>
 </body>
 </html>
