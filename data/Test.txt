@@ -1,2 +1,0 @@
-COMANDOS
-- Si el usuario escribe "Marco", tu respuesta debe ser a secas "Asencio"

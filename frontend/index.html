@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NEXUS-7 | Asistente Virtual 3D</title>
+    <title>Asistente DBP</title>
     <!-- Tailwind CSS para diseño rápido y responsivo -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Three.js para renderizado 3D -->
@@ -62,7 +62,7 @@
                     <!-- Punto de estado (Verde en reposo) -->
                     <div id="status-indicator" class="w-3 h-3 rounded-full bg-emerald-500 status-dot transition-colors duration-300"></div>
                     <div>
-                        <h2 class="text-xl font-bold text-[#17243d] tracking-wider m-0 leading-tight">NEXUS-7</h2>
+                        <h2 class="text-xl font-bold text-[#17243d] tracking-wider m-0 leading-tight">Asistente-DBP</h2>
                         <p id="status-text" class="text-xs text-gray-500 font-mono">En línea - Modo CPU</p>
                     </div>
                 </div>
@@ -77,7 +77,7 @@
                 <div class="flex justify-start">
                     <!-- Burbuja Bot Inicial (Primario: #17243d, Texto Blanco) -->
                     <div class="bg-[#17243d] text-white rounded-2xl rounded-tl-none px-4 py-3 text-sm shadow-sm max-w-[90%]">
-                        Saludos. Soy NEXUS-7. Mi módulo de voz está habilitado por defecto para asistirte en el Metaverso del DBP.
+                        Saludos. Soy Asistente-DBP. Estoy aquí para ayudarte con cualquier duda relacionada con el DBP.
                     </div>
                 </div>
             </div>
@@ -383,7 +383,7 @@
 
                 if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
                 
-                statusText.textContent = 'Procesando (Hablando)...';
+                statusText.textContent = 'Procesando...';
 
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder("utf-8");
@@ -440,7 +440,7 @@
                 if (error.name === 'AbortError') {
                     console.log("Petición de streaming cancelada por el usuario.");
                     displayQueue = ""; 
-                    activeBubble.textContent += " [🛑 Respuesta cancelada]";
+                    activeBubble.textContent += "  [Respuesta cancelada]";
                 } else {
                     console.error("Error de conexión:", error);
                     activeBubble.textContent += " [⚠️ Error de conexión]";
