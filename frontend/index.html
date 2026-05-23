@@ -3,19 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Asistente DBP</title>
+    <title>Asistente DBP - Avatar 2D</title>
     <!-- Tailwind CSS para diseño rápido y responsivo -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Three.js para renderizado 3D -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <!-- Lucide Icons para el botón de audio -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    
     <style>
-        /* Fondo Blanco del entorno 3D */
-        body { margin: 0; overflow: hidden; background-color: #ffffff; }
-        #canvas-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; }
+        body { margin: 0; background-color: #ffffff; overflow: hidden;}
         
-        /* Barra de desplazamiento personalizada (Acentos Primarios) */
+        /* Barra de desplazamiento personalizada */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.05); }
         ::-webkit-scrollbar-thumb { background: #17243d; border-radius: 10px; }
@@ -27,7 +24,7 @@
         }
         .status-processing { animation: pulse-red 2s infinite; background-color: #ff0000 !important; }
         
-        /* Cursor de tipeo blanco (para fondo azul) */
+        /* Cursor de tipeo blanco */
         .typing-cursor::after {
             content: '█';
             animation: blink 1s step-start infinite;
@@ -43,30 +40,69 @@
             100% { transform: scale(1); opacity: 0.8; box-shadow: 0 0 5px #17243d; }
         }
         .is-speaking .status-dot { animation: speaking-pulse 0.3s infinite alternate; background-color: #17243d !important; }
+
+        /* ==========================================
+           ESTILOS PARA EL CONTENEDOR DE GODOT
+           ========================================== */
+        #godot-container {
+            position: absolute;
+            bottom: 250px; /* <-- AJUSTE EN EL EJE Y: Aumentamos de 20px a 100px para elevar al avatar */
+            left: 80px;   /* Posicionado a la izquierda (opuesto al chat) */
+            width: 350px; /* Tamaño del avatar */
+            height: 350px;
+            z-index: 5;
+            /* Permite hacer clic "a través" del área transparente del canvas */
+            pointer-events: none; 
+        }
+
+        #canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            outline: none; /* Elimina el borde de enfoque por defecto */
+        }
+
+        #godot-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #17243d;
+            font-weight: bold;
+            font-size: 14px;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 5px 10px;
+            border-radius: 8px;
+            text-align: center;
+        }
     </style>
 </head>
 <body class="relative font-sans antialiased text-[#17243d] h-screen w-screen flex flex-col md:flex-row">
 
-    <!-- Contenedor del Avatar 3D -->
-    <div id="canvas-container"></div>
+    
+    <!-- Contenedor del Avatar 2D (Godot) -->
+    <div id="godot-container">
+        <!-- El lienzo transparente de Godot -->
+        <canvas id="canvas"></canvas>
+        <!-- Mensaje de carga mientras se descargan los binarios web (.wasm/.pck) -->
+        <div id="godot-loading">Iniciando Avatar...<br><span id="loading-progress">0%</span></div>
+    </div>
 
     <!-- Interfaz de Usuario (UI) superpuesta -->
     <div class="relative z-10 w-full md:w-1/3 max-w-md h-full ml-auto p-4 md:p-6 flex flex-col justify-end md:justify-center pointer-events-none">
         
-        <!-- Panel de Chat (Fondo ligeramente gris/blanco oscuro para resaltar del fondo blanco puro) -->
+        <!-- Panel de Chat -->
         <div class="bg-[#f3f4f6]/95 backdrop-blur-md border border-gray-200 rounded-2xl p-4 shadow-2xl shadow-black/10 pointer-events-auto flex flex-col h-[70vh] md:h-[80vh] transition-all">
             
             <!-- Cabecera del Asistente -->
             <div id="header-container" class="flex items-center justify-between border-b border-gray-200 pb-4 mb-4 transition-colors">
                 <div class="flex items-center gap-3">
-                    <!-- Punto de estado (Verde en reposo) -->
                     <div id="status-indicator" class="w-3 h-3 rounded-full bg-emerald-500 status-dot transition-colors duration-300"></div>
                     <div>
                         <h2 class="text-xl font-bold text-[#17243d] tracking-wider m-0 leading-tight">Asistente-DBP</h2>
                         <p id="status-text" class="text-xs text-gray-500 font-mono">En línea - Modo CPU</p>
                     </div>
                 </div>
-                <!-- Botón de Audio Toggle (Activado por defecto, color Primario) -->
                 <button id="audio-toggle" class="p-2 rounded-full hover:bg-gray-200 transition-colors text-[#17243d]" title="Activar/Desactivar Voz">
                     <i data-lucide="volume-2" id="audio-icon"></i>
                 </button>
@@ -75,9 +111,8 @@
             <!-- Historial de Chat -->
             <div id="chat-history" class="flex-1 overflow-y-auto space-y-4 mb-4 pr-2 flex flex-col">
                 <div class="flex justify-start">
-                    <!-- Burbuja Bot Inicial (Primario: #17243d, Texto Blanco) -->
                     <div class="bg-[#17243d] text-white rounded-2xl rounded-tl-none px-4 py-3 text-sm shadow-sm max-w-[90%]">
-                        Saludos. Soy Asistente-DBP. Estoy aquí para ayudarte con cualquier duda relacionada con el DBP.
+                        Saludos. Soy Asistente-DBP. Estoy aquí para ayudarte con cualquier duda relacionada con el DBP. (Versión con Avatar Godot).
                     </div>
                 </div>
             </div>
@@ -88,14 +123,11 @@
                     class="w-full bg-white border border-gray-300 rounded-xl py-3 pl-4 pr-12 text-sm text-gray-900 focus:outline-none focus:border-[#17243d] focus:ring-1 focus:ring-[#17243d] transition-all placeholder-gray-400 shadow-sm"
                     placeholder="Escribe tu consulta aquí..." 
                     autocomplete="off">
-                <!-- Botón de Enviar (Primario por defecto) -->
                 <button id="send-btn" class="absolute right-2 p-2 bg-[#17243d] hover:bg-[#20325c] text-white rounded-lg transition-colors flex items-center justify-center">
-                    <!-- Icono para Enviar (SVG Crudo) -->
                     <svg id="icon-send" class="w-4 h-4 block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="22" y1="2" x2="11" y2="13"></line>
                         <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
                     </svg>
-                    <!-- Icono para Detener (SVG Crudo) -->
                     <svg id="icon-stop" class="w-4 h-4 hidden fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                     </svg>
@@ -104,14 +136,64 @@
         </div>
     </div>
 
+    <!-- MUY IMPORTANTE: Asegúrate de que avatar.js esté en la misma carpeta o ruta correcta -->
+    <script src="../Export_Avatar/avatar.js"></script>
+
     <script>
         // Inicializar iconos
         lucide.createIcons();
 
         // ==========================================
-        // 1. CONFIGURACIÓN DE VOZ (TEXT-TO-SPEECH)
+        // 1. INICIALIZACIÓN DE GODOT ENGINE
         // ==========================================
-        let isAudioEnabled = true; // ACTIVADO POR DEFECTO
+        const loadingProgress = document.getElementById('loading-progress');
+        const loadingScreen = document.getElementById('godot-loading');
+        
+        // Creamos la instancia del motor de Godot basado en avatar.js
+        const engine = new Engine({
+            "args": [],
+            "canvasResizePolicy": 2, // Permite que el canvas llene su contenedor padre (#godot-container)
+            "executable": "../Export_Avatar/avatar",  // El nombre base de los archivos .wasm / .pck
+            "experimentalVK": false,
+            "focusCanvas": false,
+            "gdextensionLibs": []
+        });
+
+        // Iniciamos el engine y manejamos la barra de carga de los binarios
+        engine.startGame({
+            'onProgress': function (current, total) {
+                if (total > 0) {
+                    const percent = Math.floor((current / total) * 100);
+                    loadingProgress.innerText = percent + "%";
+                }
+            }
+        }).then(() => {
+            // Aseguramos que la pantalla de carga se oculte cuando la promesa de inicio se resuelve exitosamente.
+            loadingScreen.style.display = 'none';
+            console.log("Motor Godot cargado e iniciado con éxito.");
+        }).catch(e => {
+            console.error("Error al cargar Godot Engine:", e);
+            loadingScreen.innerText = "Error cargando Avatar";
+            loadingScreen.style.color = "red";
+        });
+
+        // ==========================================
+        // PUENTE DE COMUNICACIÓN JS -> GODOT
+        // ==========================================
+        // Variable global donde Godot inyectará su función
+        window.godotReceiveState = null;
+
+        function setAvatarState(state) {
+            console.log("Enviando estado a Godot:", state);
+            if (window.godotReceiveState) {
+                window.godotReceiveState(state); // Llama a Godot
+            }
+        }
+
+        // ==========================================
+        // 2. CONFIGURACIÓN DE VOZ (TEXT-TO-SPEECH)
+        // ==========================================
+        let isAudioEnabled = true;
         let ttsVoice = null;
         const synth = window.speechSynthesis;
         const audioToggleBtn = document.getElementById('audio-toggle');
@@ -145,132 +227,30 @@
         });
 
         function speakSentence(text, bubble) {
-            if (!isAudioEnabled || !text.trim()) {
-                return;
-            }
+            if (!isAudioEnabled || !text.trim()) return;
             
             const utterance = new SpeechSynthesisUtterance(text);
             window.utterances.push(utterance); 
-
             if (ttsVoice) utterance.voice = ttsVoice;
-            
             utterance.pitch = 0.9;
             utterance.rate = 1.05;
             
             utterance.onstart = () => {
                 headerContainer.classList.add('is-speaking');
                 displayQueue += text;
+                setAvatarState("SPEAKING"); // <-- Avatar a Hablando
             };
 
             utterance.onend = () => {
                 window.utterances = window.utterances.filter(u => u !== utterance);
                 if (!synth.speaking && !synth.pending) {
                     headerContainer.classList.remove('is-speaking');
+                    setAvatarState("IDLE"); // <-- Avatar a Reposo
                 }
             };
             
             synth.speak(utterance);
         }
-
-        // ==========================================
-        // 2. CONFIGURACIÓN DEL ENTORNO 3D (THREE.JS)
-        // ==========================================
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-        
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
-        document.getElementById('canvas-container').appendChild(renderer.domElement);
-
-        // Material ajustado para contrastar con el fondo Blanco (#ffffff)
-        // Usamos el color Primario (#17243d) para el wireframe en estado base
-        const material = new THREE.MeshStandardMaterial({ 
-            color: 0x17243d, 
-            wireframe: true, 
-            emissive: 0x0a111d, 
-            emissiveIntensity: 0.5, 
-            transparent: true, 
-            opacity: 0.9
-        });
-        
-        const nexusAvatar = new THREE.Group();
-
-        const bodyGeo = new THREE.BoxGeometry(1.5, 1.2, 2.2);
-        const body = new THREE.Mesh(bodyGeo, material);
-        nexusAvatar.add(body);
-
-        const headGeo = new THREE.BoxGeometry(1.2, 1.2, 1.2);
-        const head = new THREE.Mesh(headGeo, material);
-        head.position.set(0, 1, 1);
-        nexusAvatar.add(head);
-
-        const earGeo = new THREE.ConeGeometry(0.3, 0.8, 4);
-        const earL = new THREE.Mesh(earGeo, material); earL.position.set(-0.4, 1.8, 1);
-        const earR = new THREE.Mesh(earGeo, material); earR.position.set(0.4, 1.8, 1);
-        nexusAvatar.add(earL); nexusAvatar.add(earR);
-
-        const tailGeo = new THREE.CylinderGeometry(0.1, 0.1, 1.2);
-        const tail = new THREE.Mesh(tailGeo, material);
-        tail.position.set(0, 0.6, -1.2);
-        tail.rotation.x = Math.PI / 4;
-        nexusAvatar.add(tail);
-
-        const legGeo = new THREE.BoxGeometry(0.4, 1, 0.4);
-        const legFL = new THREE.Mesh(legGeo, material); legFL.position.set(-0.5, -0.8, 0.7);
-        const legFR = new THREE.Mesh(legGeo, material); legFR.position.set(0.5, -0.8, 0.7);
-        const legBL = new THREE.Mesh(legGeo, material); legBL.position.set(-0.5, -0.8, -0.7);
-        const legBR = new THREE.Mesh(legGeo, material); legBR.position.set(0.5, -0.8, -0.7);
-        nexusAvatar.add(legFL); nexusAvatar.add(legFR); nexusAvatar.add(legBL); nexusAvatar.add(legBR);
-
-        scene.add(nexusAvatar);
-
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8); scene.add(ambientLight);
-        const pointLight = new THREE.PointLight(0x17243d, 2, 50);
-        pointLight.position.set(5, 5, 5); scene.add(pointLight);
-
-        camera.position.z = 8;
-        camera.position.y = 1; 
-        
-        function adjustLayout() {
-            if (window.innerWidth > 768) { nexusAvatar.position.x = -3; } 
-            else { nexusAvatar.position.x = 0; nexusAvatar.position.y = 1.5; }
-        }
-        adjustLayout();
-
-        let isProcessing = false;
-        let time = 0;
-
-        function animate() {
-            requestAnimationFrame(animate);
-            time += 0.01;
-            
-            nexusAvatar.rotation.y = Math.sin(time * 0.5) * 0.3; 
-            nexusAvatar.position.y = Math.sin(time * 2) * 0.05; 
-            tail.rotation.z = Math.sin(time * 10) * 0.2; 
-
-            if (isProcessing) {
-                tail.rotation.z = Math.sin(time * 25) * 0.5; 
-                nexusAvatar.rotation.y += 0.05; 
-                // Color Rojo reservado para Procesamiento
-                material.color.setHex(0xff0000); material.emissive.setHex(0x990000); pointLight.color.setHex(0xff0000);
-            } else if (headerContainer.classList.contains('is-speaking')) {
-                head.rotation.x = Math.sin(time * 15) * 0.1; 
-                // Hablar: Color azul medio para variar
-                material.color.setHex(0x3b82f6); material.emissive.setHex(0x2563eb); pointLight.color.setHex(0x3b82f6);
-            } else {
-                head.rotation.x = 0;
-                // Color Primario para Reposo
-                material.color.setHex(0x17243d); material.emissive.setHex(0x0a111d); pointLight.color.setHex(0x17243d);
-            }
-            renderer.render(scene, camera);
-        }
-        animate();
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight); adjustLayout();
-        });
 
         // ==========================================
         // 3. LÓGICA DE INTERACCIÓN Y STREAMING
@@ -286,11 +266,11 @@
         let currentAbortController = null;
         let displayQueue = ""; 
         let typingInterval = null; 
+        let isProcessing = false;
 
         function addUserMessage(text) {
             const wrapper = document.createElement('div'); wrapper.className = 'flex justify-end';
             const bubble = document.createElement('div');
-            // Burbuja de Usuario: Blanco con sombra y texto negro
             bubble.className = 'bg-white text-gray-900 border border-gray-100 rounded-2xl rounded-tr-none px-4 py-3 text-sm max-w-[85%] shadow-md';
             bubble.textContent = text; wrapper.appendChild(bubble); chatHistory.appendChild(wrapper);
             chatHistory.scrollTop = chatHistory.scrollHeight;
@@ -299,7 +279,6 @@
         function createBotMessageBubble() {
             const wrapper = document.createElement('div'); wrapper.className = 'flex justify-start';
             const bubble = document.createElement('div');
-            // Burbuja Bot: Color primario con texto blanco
             bubble.className = 'bg-[#17243d] text-white rounded-2xl rounded-tl-none px-4 py-3 text-sm max-w-[85%] shadow-sm typing-cursor min-h-[44px]';
             wrapper.appendChild(bubble); chatHistory.appendChild(wrapper); chatHistory.scrollTop = chatHistory.scrollHeight;
             return bubble;
@@ -307,14 +286,13 @@
 
         async function sendMessage() {
             if (isProcessing) {
-                if (currentAbortController) {
-                    currentAbortController.abort();
-                }
+                if (currentAbortController) currentAbortController.abort();
                 synth.cancel();
                 displayQueue = ""; 
                 if (typingInterval) clearInterval(typingInterval);
                 headerContainer.classList.remove('is-speaking'); 
                 if (activeBubble) activeBubble.classList.remove('typing-cursor');
+                setAvatarState("IDLE"); // <-- Avatar a Reposo si aborta
                 return;
             }
 
@@ -327,24 +305,23 @@
             userInput.value = '';
             
             isProcessing = true;
-            // Estado procesando: Puntos y textos Rojos
             statusIndicator.classList.remove('bg-emerald-500');
             statusIndicator.classList.add('status-processing');
             statusText.textContent = 'Procesando (Pensando)...';
             statusText.classList.replace('text-gray-500', 'text-[#ff0000]');
 
-            // Botón de Detener (Rojo reservado)
             sendBtn.classList.replace('bg-[#17243d]', 'bg-[#ff0000]');
             sendBtn.classList.replace('hover:bg-[#20325c]', 'hover:bg-[#cc0000]');
             iconSend.classList.replace('block', 'hidden');
             iconStop.classList.replace('hidden', 'block');
+
+            setAvatarState("THINKING"); // <-- Avatar a Pensando
 
             activeBubble = createBotMessageBubble();
             let speechBuffer = "";
             displayQueue = ""; 
 
             if (typingInterval) clearInterval(typingInterval);
-            
             const typeSpeedVoiceOn = 50;  
             const typeSpeedVoiceOff = 20; 
             const typeSpeed = isAudioEnabled ? typeSpeedVoiceOn : typeSpeedVoiceOff;
@@ -352,13 +329,11 @@
             typingInterval = setInterval(() => {
                 if (displayQueue.length > 0) {
                     let charsToType = 1;
-                    
                     if (!isAudioEnabled) {
                         charsToType = displayQueue.length > 60 ? 3 : (displayQueue.length > 30 ? 2 : 1);
                     } else {
                         charsToType = displayQueue.length > 100 ? 2 : 1; 
                     }
-                    
                     activeBubble.textContent += displayQueue.substring(0, charsToType);
                     displayQueue = displayQueue.substring(charsToType);
                     chatHistory.scrollTop = chatHistory.scrollHeight;
@@ -374,6 +349,7 @@
             currentAbortController = new AbortController();
 
             try {
+                // LLAMADA AL BACKEND REAL (asegúrate de que FastAPI esté corriendo en 8000)
                 const response = await fetch('http://localhost:8000/chat/stream', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -400,7 +376,6 @@
                         for (const line of lines) {
                             if (line.startsWith('data: ')) {
                                 const dataStr = line.replace('data: ', '').trim();
-                                
                                 if (dataStr === '[DONE]') {
                                     done = true;
                                     if (isAudioEnabled && speechBuffer.trim()) {
@@ -410,13 +385,11 @@
                                     }
                                     break;
                                 }
-                                
                                 if (dataStr) {
                                     try {
                                         const dataJson = JSON.parse(dataStr);
                                         if (dataJson.respuesta) {
                                             const token = dataJson.respuesta;
-                                            
                                             if (isAudioEnabled) {
                                                 speechBuffer += token;
                                                 const match = speechBuffer.match(/([^.!?]+[.!?]+)(\s|$)/);
@@ -449,7 +422,6 @@
                 isProcessing = false;
                 currentAbortController = null;
                 
-                // Restaurar estado a inactivo (Verde y colores normales)
                 statusIndicator.classList.remove('status-processing');
                 statusIndicator.classList.add('bg-emerald-500');
                 statusText.textContent = 'En línea - Modo CPU';
@@ -457,9 +429,11 @@
 
                 if (isAudioEnabled && !synth.speaking && !synth.pending) {
                      headerContainer.classList.remove('is-speaking');
+                     setAvatarState("IDLE"); // <-- Avatar a Reposo (con audio)
+                } else if (!isAudioEnabled) {
+                     setAvatarState("IDLE"); // <-- Avatar a Reposo (sin audio)
                 }
 
-                // Restaurar Botón de Enviar a Primario
                 sendBtn.classList.replace('bg-[#ff0000]', 'bg-[#17243d]');
                 sendBtn.classList.replace('hover:bg-[#cc0000]', 'hover:bg-[#20325c]');
                 iconStop.classList.replace('block', 'hidden');
@@ -469,9 +443,7 @@
 
         sendBtn.addEventListener('click', sendMessage);
         userInput.addEventListener('keypress', (e) => { 
-            if (e.key === 'Enter' && !isProcessing) {
-                sendMessage(); 
-            }
+            if (e.key === 'Enter' && !isProcessing) sendMessage(); 
         });
     </script>
 </body>
