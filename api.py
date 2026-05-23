@@ -161,6 +161,10 @@ async def upload_document(file: UploadFile = File(...)):
         content_bytes = await file.read()
         text_content = content_bytes.decode("utf-8")
         
+        # Validación 1: Evitar procesar archivos vacíos
+        if not text_content.strip():
+            raise HTTPException(status_code=400, detail="El archivo está vacío o no contiene texto legible.")
+        
         # 1. Guardar en MongoDB
         mongo_collection.update_one(
             {"filename": file.filename},
@@ -183,10 +187,16 @@ async def upload_document(file: UploadFile = File(...)):
             metadatas=[{"source": file.filename}]
         )
         
+        # Validación 2: Evitar enviar una lista vacía a ChromaDB (Soluciona el error de Embeddings [])
+        if not chunks:
+             raise HTTPException(status_code=400, detail="No se pudieron generar fragmentos válidos del texto.")
+        
         # 4. Enviar a ChromaDB por HTTP
         vector_store.add_documents(chunks)
         
         return {"message": f"Archivo '{file.filename}' guardado en Mongo e indexado en ChromaDB."}
+    except HTTPException:
+        raise # Permitir que los errores 400 suban directamente
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error procesando el archivo: {str(e)}")
 
