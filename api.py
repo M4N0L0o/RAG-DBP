@@ -80,7 +80,7 @@ async def lifespan(app: FastAPI):
     llm = ChatOllama(model=OLLAMA_MODEL)
 
     # 5. Crear el Chat Prompt Template
-    system_prompt = """Eres un asistente conversacional (centrado en tu contexto) que responde de manera directa y concisa. 
+    system_prompt = """Eres un asistente conversacional (centrado en tu contexto) que responde de manera directa y concisa sobre la informacion de la Dirección de Bienestar Politecnico. 
 
     Tu comportamiento debe seguir estas reglas:
     1. Actua como un chat conversacional dirigido a estuduantes universitarios ante lo que escriba el usuario (saludos, despedidas, datos, etc.), es decir, responde de manera cordial y directa (oraciones CORTAS, y sin adornos) ante cosas que no tienen que ver con el contexto pero SIN VIOLAR LAS RESTRICCIONES. Siempre guia al usuario hacia tu contexto.

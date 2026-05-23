@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Asistente DBP - Avatar 2D</title>
+    <title>Asistente DBP</title>
+    <link rel="icon" href="../Export_Avatar/avatar.icon.png" type="image/x-icon">
     <!-- Tailwind CSS para diseño rápido y responsivo -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons para el botón de audio -->
@@ -46,9 +47,9 @@
            ========================================== */
         #godot-container {
             position: absolute;
-            bottom: 250px; /* <-- AJUSTE EN EL EJE Y: Aumentamos de 20px a 100px para elevar al avatar */
-            left: 80px;   /* Posicionado a la izquierda (opuesto al chat) */
-            width: 350px; /* Tamaño del avatar */
+            bottom: 250px; 
+            left: 80px;   
+            width: 350px; 
             height: 350px;
             z-index: 5;
             /* Permite hacer clic "a través" del área transparente del canvas */
@@ -59,7 +60,7 @@
             width: 100%;
             height: 100%;
             display: block;
-            outline: none; /* Elimina el borde de enfoque por defecto */
+            outline: none; 
         }
 
         #godot-loading {
@@ -171,6 +172,25 @@
             // Aseguramos que la pantalla de carga se oculte cuando la promesa de inicio se resuelve exitosamente.
             loadingScreen.style.display = 'none';
             console.log("Motor Godot cargado e iniciado con éxito.");
+
+            // --- CORRECCIÓN DE TÍTULO E ÍCONO (Solución Rápida) ---
+            
+            // 1. Forzamos el título de vuelta al original
+            document.title = "Asistente DBP";
+            
+            // 2. Removemos TODOS los íconos (incluyendo el inyectado por Godot)
+            const icons = document.querySelectorAll("link[rel~='icon']");
+            icons.forEach(icon => icon.remove());
+            
+            // 3. Reinyectamos tu ícono personalizado de forma estricta
+            const myIcon = document.createElement('link');
+            myIcon.rel = 'icon';
+            myIcon.href = '../Export_Avatar/avatar.icon.png';
+            myIcon.type = 'image/x-icon';
+            document.head.appendChild(myIcon);
+            
+            // ------------------------------------------------------
+
         }).catch(e => {
             console.error("Error al cargar Godot Engine:", e);
             loadingScreen.innerText = "Error cargando Avatar";
