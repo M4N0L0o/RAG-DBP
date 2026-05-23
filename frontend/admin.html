@@ -242,7 +242,7 @@
 
         // Eliminar documento
         async function deleteDocument(filename) {
-            if (!confirm(`¿Estás seguro de que deseas eliminar "${filename}"? \nNEXUS-7 olvidará toda la información contenida en él.`)) return;
+            if (!confirm(`¿Estás seguro de que deseas eliminar "${filename}"? \nAsistente-DBP olvidará toda la información contenida en él.`)) return;
 
             try {
                 const response = await fetch(`${API_BASE}/${filename}`, {

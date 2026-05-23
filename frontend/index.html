@@ -11,7 +11,15 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     
     <style>
-        body { margin: 0; background-color: #ffffff; overflow: hidden;}
+        body { 
+            margin: 0; 
+            background-color: #ffffff; /* Color de respaldo por si la imagen tarda en cargar */
+            background-image: url('assets/fondo1.png');
+            background-size: cover; /* Asegura que la imagen cubra toda la pantalla sin deformarse */
+            background-position: center; /* Centra la imagen */
+            background-repeat: no-repeat; /* Evita que la imagen se repita como mosaico */
+            overflow: hidden;
+        }
         
         /* Barra de desplazamiento personalizada */
         ::-webkit-scrollbar { width: 6px; }
@@ -47,8 +55,8 @@
            ========================================== */
         #godot-container {
             position: absolute;
-            bottom: 250px; 
-            left: 80px;   
+            bottom: 300px; 
+            left: 250px;   
             width: 350px; 
             height: 350px;
             z-index: 5;
