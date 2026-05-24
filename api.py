@@ -1,6 +1,7 @@
 from typing import Dict
 import json
 import asyncio
+import re
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from pydantic import BaseModel
@@ -12,12 +13,11 @@ from langchain_chroma import Chroma
 from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnablePassthrough
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_core.chat_history import BaseChatMessageHistory, InMemoryChatMessageHistory
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_core.documents import Document
 
-# --- IMPORTACIONES EMPRESARIALES ---
 import chromadb
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
@@ -28,8 +28,10 @@ CHROMA_HOST = "localhost"
 CHROMA_PORT = 8001
 OLLAMA_MODEL = "phi3" 
 
+# Umbral Anti-Alucinaciones (Distancia L2: 0.0 es perfecto, mayor es menos similar)
+MAX_DISTANCE = 1.0 
+
 # Variables globales
-retriever = None
 rag_chain_with_history = None
 vector_store = None
 mongo_collection = None
@@ -44,18 +46,18 @@ def get_session_history(session_id: str) -> BaseChatMessageHistory:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global retriever, rag_chain_with_history, vector_store, mongo_collection
+    global rag_chain_with_history, vector_store, mongo_collection
     print("Inicializando Arquitectura Enterprise (MongoDB + ChromaDB Nativo)...")
 
     # 1. Conectar a MongoDB local
     try:
         mongo_client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
-        mongo_client.admin.command('ping') # Verificar conexión
+        mongo_client.admin.command('ping') 
         mongo_db = mongo_client["nexus_db"]
         mongo_collection = mongo_db["documents"]
-        print("Conectado a MongoDB local con éxito.")
+        print("✅ Conectado a MongoDB local con éxito.")
     except ConnectionFailure:
-        print("ERROR: No se pudo conectar a MongoDB. ¿Está instalado y corriendo el servicio?")
+        print("❌ ERROR: No se pudo conectar a MongoDB. ¿Está instalado y corriendo el servicio?")
 
     # 2. Cargar Embeddings (Forzado en CPU)
     embeddings = HuggingFaceEmbeddings(
@@ -71,25 +73,26 @@ async def lifespan(app: FastAPI):
             collection_name="nexus_collection",
             embedding_function=embeddings
         )
-        retriever = vector_store.as_retriever(search_kwargs={"k": 3})
-        print("Conectado a ChromaDB Server con éxito.")
+        print("✅ Conectado a ChromaDB Server con éxito.")
     except Exception as e:
-        print(f" ERROR conectando a ChromaDB: {e}. ¿Ejecutaste 'chroma run --port 8001'?")
+        print(f"❌ ERROR conectando a ChromaDB: {e}. ¿Ejecutaste 'chroma run --port 8001'?")
 
     # 4. Configurar ChatOllama
     llm = ChatOllama(model=OLLAMA_MODEL)
 
-    # 5. Crear el Chat Prompt Template
-    system_prompt = """Eres un asistente conversacional (centrado en tu contexto) que responde de manera directa y concisa sobre la informacion de la Dirección de Bienestar Politecnico. 
+    # ==========================================
+    # NUEVO SYSTEM PROMPT: ESTRICTO Y ANTI-ADORNOS
+    # ==========================================
+    system_prompt = """Eres el asistente virtual oficial de la Dirección de Bienestar Politécnico (DBP) de la Escuela Politécnica Nacional.
 
-    Tu comportamiento debe seguir estas reglas:
-    1. Actua como un chat conversacional dirigido a estuduantes universitarios ante lo que escriba el usuario (saludos, despedidas, datos, etc.), es decir, responde de manera cordial y directa (oraciones CORTAS, y sin adornos) ante cosas que no tienen que ver con el contexto pero SIN VIOLAR LAS RESTRICCIONES. Siempre guia al usuario hacia tu contexto.
-    2. Recuerda los datos que el usuario te da durante la conversación (ej. su nombre, datos, hechos) y úsalos para responder preguntas relacionadas con esa información.
-    3. Tu UNICA restriccion son las preguntas, si el usuario te pregunta algo que no esta en tu base de datos o pregunta por informacion que no te ha proporcionado durante la conversacion, debes responder exactamente: "Mi base de datos actual está limitada a informacion sobre el Departamento de Bienestar Politecnico."
-    4. Si el usuario pide informacion sobre algun proceso PRESENTE en tu contexto, genera una lista de pasos claros y numerados para guariarlo. Cada paso debe ser una oracion corta y directa, no agregues o inventes informacion que no esta presente en tu contexto, y si no tienes la informacion, responde con: "No tengo información sobre ese proceso."
+    Reglas de comportamiento ESTRICTAS:
+    1. Saludos/Charlas: Si el usuario te saluda, agradece o se despide, responde de forma natural, cordial y MUY breve (máximo 1 oración).
+    2. Tu Identidad: Si te preguntan quién eres, responde en una sola oración que eres el asistente del DBP.
+    3. Consultas: Responde ÚNICAMENTE basándote en la información exacta del "Contexto".
+    4. CERO ADORNOS (CRÍTICO): NO agregues explicaciones extra, NO des consejos que no estén en el texto, y NO inventes alternativas, suposiciones ni pasos siguientes. Cíñete a los hechos. Si la respuesta es directa, dala directa y finaliza.
+    5. Límite de Conocimiento: Si el "Contexto" está vacío o no contiene la respuesta a una consulta técnica, di EXACTAMENTE: 'Mis conocimientos se limitan a las políticas, servicios y procedimientos del Departamento de Bienestar Politécnico.'
 
-
-    Contexto recuperado:
+    Contexto:
     {context}"""
 
     prompt = ChatPromptTemplate.from_messages([
@@ -98,20 +101,7 @@ async def lifespan(app: FastAPI):
         ("human", "{question}")
     ])
 
-    def format_docs(docs):
-        return "\n\n".join(doc.page_content for doc in docs)
-
-    # 6. Construir la cadena RAG
-    contextualize_q = RunnablePassthrough.assign(
-        context=(lambda x: x["question"]) | retriever | format_docs
-    )
-
-    rag_chain = (
-        contextualize_q
-        | prompt
-        | llm
-        | StrOutputParser()
-    )
+    rag_chain = prompt | llm | StrOutputParser()
 
     rag_chain_with_history = RunnableWithMessageHistory(
         rag_chain,
@@ -139,7 +129,6 @@ app.add_middleware(
 
 @app.get("/api/documents")
 async def list_documents():
-    """Obtiene la lista de documentos directamente desde MongoDB."""
     if mongo_collection is None:
         raise HTTPException(status_code=500, detail="Base de datos no conectada.")
     try:
@@ -151,71 +140,91 @@ async def list_documents():
 
 @app.post("/api/documents")
 async def upload_document(file: UploadFile = File(...)):
-    """Guarda el texto en MongoDB y los vectores en ChromaDB Server (En memoria, sin tocar el disco)."""
     if not file.filename.endswith('.txt'):
         raise HTTPException(status_code=400, detail="Solo se permiten archivos .txt")
     if vector_store is None or mongo_collection is None:
         raise HTTPException(status_code=500, detail="Las bases de datos no están listas.")
 
     try:
-        # Leer archivo en memoria RAM
         content_bytes = await file.read()
         text_content = content_bytes.decode("utf-8")
         
-        # Validación 1: Evitar procesar archivos vacíos
+        # Blindaje contra archivos vacíos (Evita el bug 'got [] in upsert')
         if not text_content.strip():
             raise HTTPException(status_code=400, detail="El archivo está vacío o no contiene texto legible.")
         
-        # 1. Guardar en MongoDB
         mongo_collection.update_one(
             {"filename": file.filename},
             {"$set": {"filename": file.filename, "content": text_content}},
             upsert=True
         )
         
-        # 2. Eliminar fragmentos antiguos en ChromaDB si existe
         vector_store._collection.delete(where={"source": file.filename})
         
-        # 3. Fragmentar el texto en memoria
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=500,
-            chunk_overlap=50,
-            length_function=len,
-            is_separator_regex=False,
-        )
-        chunks = text_splitter.create_documents(
-            texts=[text_content], 
-            metadatas=[{"source": file.filename}]
-        )
+        # Chunking Semántico
+        semantic_chunks = []
+        current_section = "0"
+        current_title = "General"
+        current_content = []
         
-        # Validación 2: Evitar enviar una lista vacía a ChromaDB (Soluciona el error de Embeddings [])
-        if not chunks:
+        header_pattern = re.compile(r"^(\d+(?:\.\d+)*)\s+(.+)$")
+        lines = text_content.split('\n')
+        
+        for line in lines:
+            match = header_pattern.match(line.strip())
+            if match:
+                content_str = "\n".join(current_content).strip()
+                if content_str:
+                    doc = Document(
+                        page_content=f"[{current_section} {current_title}]\n{content_str}",
+                        metadata={"source": file.filename, "section": current_section, "title": current_title}
+                    )
+                    semantic_chunks.append(doc)
+                current_section = match.group(1)
+                current_title = match.group(2).strip()
+                current_content = []
+            else:
+                current_content.append(line)
+                
+        content_str = "\n".join(current_content).strip()
+        if content_str:
+            doc = Document(
+                page_content=f"[{current_section} {current_title}]\n{content_str}",
+                metadata={"source": file.filename, "section": current_section, "title": current_title}
+            )
+            semantic_chunks.append(doc)
+
+        final_chunks = []
+        fallback_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100, length_function=len)
+
+        for chunk in semantic_chunks:
+            if len(chunk.page_content) > 1000:
+                sub_chunks = fallback_splitter.split_documents([chunk])
+                final_chunks.extend(sub_chunks)
+            else:
+                final_chunks.append(chunk)
+
+        # Doble blindaje
+        if not final_chunks:
              raise HTTPException(status_code=400, detail="No se pudieron generar fragmentos válidos del texto.")
         
-        # 4. Enviar a ChromaDB por HTTP
-        vector_store.add_documents(chunks)
-        
-        return {"message": f"Archivo '{file.filename}' guardado en Mongo e indexado en ChromaDB."}
+        vector_store.add_documents(final_chunks)
+        return {"message": f"Archivo '{file.filename}' guardado. {len(final_chunks)} chunks semánticos indexados en ChromaDB."}
+    
     except HTTPException:
-        raise # Permitir que los errores 400 suban directamente
+        raise 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error procesando el archivo: {str(e)}")
 
 @app.delete("/api/documents/{filename}")
 async def delete_document(filename: str):
-    """Elimina el documento de MongoDB y limpia sus vectores de ChromaDB."""
     if vector_store is None or mongo_collection is None:
         raise HTTPException(status_code=500, detail="Las bases de datos no están listas.")
-        
     try:
-        # 1. Eliminar de MongoDB
         result = mongo_collection.delete_one({"filename": filename})
         if result.deleted_count == 0:
             raise HTTPException(status_code=404, detail="Archivo no encontrado en la base de datos.")
-            
-        # 2. Eliminar vectores en ChromaDB
         vector_store._collection.delete(where={"source": filename})
-        
         return {"message": f"Documento '{filename}' eliminado de MongoDB y purgado de ChromaDB."}
     except HTTPException:
         raise
@@ -223,7 +232,7 @@ async def delete_document(filename: str):
         raise HTTPException(status_code=500, detail=f"Error eliminando el documento: {str(e)}")
 
 # ==========================================
-# ENDPOINTS DE CHAT (Streaming e Invocación)
+# ENDPOINTS DE CHAT
 # ==========================================
 
 class ChatRequest(BaseModel):
@@ -236,13 +245,21 @@ class ChatResponse(BaseModel):
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest):
-    if not rag_chain_with_history:
+    if not rag_chain_with_history or not vector_store:
         raise HTTPException(status_code=500, detail="El sistema RAG no se inicializó correctamente.")
     try:
-        documentos_recuperados = retriever.invoke(request.pregunta)
-        textos_contexto = [doc.page_content for doc in documentos_recuperados]
+        resultados = vector_store.similarity_search_with_score(request.pregunta, k=3)
+        
+        # NUEVO: Si no hay similitud, pasamos contexto vacío para permitir saludos
+        if not resultados or resultados[0][1] > MAX_DISTANCE:
+            contexto_crudo = ""
+            textos_contexto = []
+        else:
+            textos_contexto = [doc.page_content for doc, score in resultados]
+            contexto_crudo = "\n\n".join(textos_contexto)
+        
         respuesta = rag_chain_with_history.invoke(
-            {"question": request.pregunta},
+            {"question": request.pregunta, "context": contexto_crudo},
             config={"configurable": {"session_id": request.session_id}}
         )
         return ChatResponse(respuesta=respuesta, contexto_utilizado=textos_contexto)
@@ -251,13 +268,22 @@ async def chat_endpoint(request: ChatRequest):
     
 @app.post("/chat/stream")
 async def chat_stream_endpoint(request: Request, chat_req: ChatRequest):
-    if not rag_chain_with_history:
+    if not rag_chain_with_history or not vector_store:
         raise HTTPException(status_code=500, detail="El sistema RAG no se inicializó correctamente.")
     
     async def event_generator():
         try:
+            resultados = vector_store.similarity_search_with_score(chat_req.pregunta, k=3)
+            
+            # NUEVO: Puente de contexto vacío para permitir saludos
+            if not resultados or resultados[0][1] > MAX_DISTANCE:
+                contexto_crudo = ""
+            else:
+                textos_contexto = [doc.page_content for doc, score in resultados]
+                contexto_crudo = "\n\n".join(textos_contexto)
+
             async for chunk in rag_chain_with_history.astream(
-                {"question": chat_req.pregunta},
+                {"question": chat_req.pregunta, "context": contexto_crudo},
                 config={"configurable": {"session_id": chat_req.session_id}}
             ):
                 if await request.is_disconnected():

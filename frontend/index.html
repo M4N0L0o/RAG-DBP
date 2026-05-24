@@ -5,19 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Asistente DBP</title>
     <link rel="icon" href="../Export_Avatar/avatar.icon.png" type="image/x-icon">
-    <!-- Tailwind CSS para diseño rápido y responsivo -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lucide Icons para el botón de audio -->
     <script src="https://unpkg.com/lucide@latest"></script>
     
     <style>
         body { 
             margin: 0; 
-            background-color: #ffffff; /* Color de respaldo por si la imagen tarda en cargar */
+            background-color: #ffffff; 
             background-image: url('assets/fondo1.png');
-            background-size: cover; /* Asegura que la imagen cubra toda la pantalla sin deformarse */
-            background-position: center; /* Centra la imagen */
-            background-repeat: no-repeat; /* Evita que la imagen se repita como mosaico */
+            background-size: cover; 
+            background-position: center;
+            background-repeat: no-repeat; 
             overflow: hidden;
         }
         
@@ -26,7 +24,7 @@
         ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.05); }
         ::-webkit-scrollbar-thumb { background: #17243d; border-radius: 10px; }
         
-        /* Animaciones para Procesando (Rojo) */
+        /* Animaciones para Procesando */
         @keyframes pulse-red {
             0%, 100% { box-shadow: 0 0 5px #ff0000, 0 0 10px #ff0000; }
             50% { box-shadow: 0 0 2px #ff0000, 0 0 5px #ff0000; }
@@ -42,13 +40,13 @@
         }
         @keyframes blink { 50% { opacity: 0; } }
 
-        /* Efecto de voz activa (ondas en Azul/Primario) */
+        /* Efecto de voz activa */
         @keyframes speaking-pulse {
-            0% { transform: scale(1); opacity: 0.8; box-shadow: 0 0 5px #17243d; }
-            50% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 10px #17243d; }
-            100% { transform: scale(1); opacity: 0.8; box-shadow: 0 0 5px #17243d; }
+            0% { transform: scale(1); opacity: 0.8; box-shadow: 0 0 5px #60b9f8; }
+            50% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 10px #60b9f8; }
+            100% { transform: scale(1); opacity: 0.8; box-shadow: 0 0 5px #60b9f8; }
         }
-        .is-speaking .status-dot { animation: speaking-pulse 0.3s infinite alternate; background-color: #17243d !important; }
+        .is-speaking .status-dot { animation: speaking-pulse 0.3s infinite alternate; background-color: #60b9f8 !important; }
 
         /* ==========================================
            ESTILOS PARA EL CONTENEDOR DE GODOT
@@ -60,7 +58,6 @@
             width: 350px; 
             height: 350px;
             z-index: 5;
-            /* Permite hacer clic "a través" del área transparente del canvas */
             pointer-events: none; 
         }
 
@@ -145,11 +142,9 @@
         </div>
     </div>
 
-    <!-- MUY IMPORTANTE: Asegúrate de que avatar.js esté en la misma carpeta o ruta correcta -->
     <script src="../Export_Avatar/avatar.js"></script>
 
     <script>
-        // Inicializar iconos
         lucide.createIcons();
 
         // ==========================================
@@ -161,8 +156,8 @@
         // Creamos la instancia del motor de Godot basado en avatar.js
         const engine = new Engine({
             "args": [],
-            "canvasResizePolicy": 2, // Permite que el canvas llene su contenedor padre (#godot-container)
-            "executable": "../Export_Avatar/avatar",  // El nombre base de los archivos .wasm / .pck
+            "canvasResizePolicy": 2, 
+            "executable": "../Export_Avatar/avatar",  
             "experimentalVK": false,
             "focusCanvas": false,
             "gdextensionLibs": []
@@ -177,11 +172,10 @@
                 }
             }
         }).then(() => {
-            // Aseguramos que la pantalla de carga se oculte cuando la promesa de inicio se resuelve exitosamente.
             loadingScreen.style.display = 'none';
             console.log("Motor Godot cargado e iniciado con éxito.");
 
-            // --- CORRECCIÓN DE TÍTULO E ÍCONO (Solución Rápida) ---
+            // --- CORRECCIÓN DE TÍTULO E ÍCONO ---
             
             // 1. Forzamos el título de vuelta al original
             document.title = "Asistente DBP";
@@ -377,7 +371,7 @@
             currentAbortController = new AbortController();
 
             try {
-                // LLAMADA AL BACKEND REAL (asegúrate de que FastAPI esté corriendo en 8000)
+                // LLAMADA AL BACKEND
                 const response = await fetch('http://localhost:8000/chat/stream', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
