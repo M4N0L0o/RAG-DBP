@@ -85,6 +85,11 @@
 </head>
 <body class="relative font-sans antialiased text-[#17243d] h-screen w-screen flex flex-col md:flex-row">
 
+    <!-- Botón de Administración Flotante -->
+    <a href="admin.html" class="absolute top-6 left-6 z-50 flex items-center gap-2 bg-white/90 backdrop-blur-sm border border-gray-200 text-[#17243d] hover:bg-[#17243d] hover:text-white px-4 py-2.5 rounded-xl shadow-lg transition-all duration-300 font-medium text-sm group">
+        <i data-lucide="settings" class="w-4 h-4 transition-transform duration-500 group-hover:rotate-90"></i>
+        <span>Panel de Administración</span>
+    </a>
     
     <!-- Contenedor del Avatar 2D (Godot) -->
     <div id="godot-container">
@@ -142,6 +147,7 @@
         </div>
     </div>
 
+    <!-- Si el script local falla por CORS o ruta en el Canvas, asegúrate de mantenerlo en tu entorno local -->
     <script src="../Export_Avatar/avatar.js"></script>
 
     <script>

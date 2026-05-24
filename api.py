@@ -3,7 +3,7 @@ import json
 import asyncio
 import re
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Request, UploadFile, File
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Response
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -137,6 +137,25 @@ async def list_documents():
         return {"documents": files}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# NUEVO ENDPOINT: Descargar archivo específico
+@app.get("/api/documents/{filename}")
+async def download_document(filename: str):
+    if mongo_collection is None:
+        raise HTTPException(status_code=500, detail="Base de datos no conectada.")
+    try:
+        doc = mongo_collection.find_one({"filename": filename})
+        if not doc:
+            raise HTTPException(status_code=404, detail="Archivo no encontrado en la base de datos.")
+        
+        # Devolvemos el texto plano forzando la descarga con las cabeceras HTTP
+        return Response(
+            content=doc.get("content", ""), 
+            media_type="text/plain", 
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al recuperar el archivo: {str(e)}")
 
 @app.post("/api/documents")
 async def upload_document(file: UploadFile = File(...)):

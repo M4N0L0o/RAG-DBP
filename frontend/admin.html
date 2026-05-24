@@ -17,6 +17,12 @@
             to { transform: translateX(0); opacity: 1; }
         }
         .toast-enter { animation: slideIn 0.3s ease-out forwards; }
+
+        /* Estilo para la barra de desplazamiento interna del contenido */
+        .content-scroll::-webkit-scrollbar { width: 6px; }
+        .content-scroll::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.05); }
+        .content-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .content-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
 <body class="text-[#17243d] font-sans antialiased min-h-screen flex flex-col">
@@ -31,7 +37,7 @@
             <!-- Enlace de regreso al Asistente -->
             <a href="index.html" class="flex items-center gap-2 text-sm text-gray-300 hover:text-white transition-colors bg-white/10 px-4 py-2 rounded-lg">
                 <i data-lucide="monitor" class="w-4 h-4"></i>
-                <span>Ver Asistente 3D</span>
+                <span>Ver Asistente</span>
             </a>
         </div>
     </nav>
@@ -175,24 +181,74 @@
             emptyState.classList.add('hidden');
             documentsList.classList.remove('hidden');
 
-            files.forEach(file => {
+            files.forEach((file, index) => {
                 const li = document.createElement('li');
-                li.className = 'flex items-center justify-between p-4 bg-gray-50 border border-gray-100 rounded-xl hover:shadow-md transition-shadow group';
+                li.className = 'bg-gray-50 border border-gray-100 rounded-xl hover:shadow-md transition-shadow group overflow-hidden';
                 
                 li.innerHTML = `
-                    <div class="flex items-center gap-3 overflow-hidden">
-                        <div class="p-2 bg-white rounded-lg shadow-sm text-[#17243d]">
-                            <i data-lucide="file-text" class="w-5 h-5"></i>
+                    <!-- Cabecera del Documento (Clickeable para expandir) -->
+                    <div class="flex items-center justify-between p-4 cursor-pointer select-none" onclick="toggleDocument('${file}', 'content-${index}', 'icon-${index}')">
+                        <div class="flex items-center gap-3 overflow-hidden">
+                            <div class="p-2 bg-white rounded-lg shadow-sm text-[#17243d]">
+                                <i data-lucide="file-text" class="w-5 h-5"></i>
+                            </div>
+                            <span class="font-medium text-gray-800 truncate">${file}</span>
                         </div>
-                        <span class="font-medium text-gray-800 truncate">${file}</span>
+                        
+                        <!-- Botones de Acción -->
+                        <div class="flex items-center gap-2">
+                            <button onclick="downloadDocument(event, '${file}')" class="p-2 text-gray-400 hover:text-[#17243d] hover:bg-gray-200 rounded-lg transition-colors" title="Descargar Documento">
+                                <i data-lucide="download" class="w-5 h-5"></i>
+                            </button>
+                            <button onclick="deleteDocument(event, '${file}')" class="p-2 text-gray-400 hover:text-white hover:bg-[#ff0000] rounded-lg transition-colors" title="Eliminar de la BD">
+                                <i data-lucide="trash-2" class="w-5 h-5"></i>
+                            </button>
+                            <div class="w-px h-6 bg-gray-300 mx-1"></div>
+                            <i id="icon-${index}" data-lucide="chevron-down" class="w-5 h-5 text-gray-400 transition-transform duration-300"></i>
+                        </div>
                     </div>
-                    <button onclick="deleteDocument('${file}')" class="p-2 text-gray-400 hover:text-white hover:bg-[#ff0000] rounded-lg transition-colors" title="Eliminar de la BD">
-                        <i data-lucide="trash-2" class="w-5 h-5"></i>
-                    </button>
+
+                    <!-- Contenedor desplegable para el contenido -->
+                    <div id="content-${index}" class="hidden border-t border-gray-200 bg-white p-6 max-h-64 overflow-y-auto content-scroll text-sm text-gray-700 whitespace-pre-wrap font-mono" data-loaded="false"></div>
                 `;
                 documentsList.appendChild(li);
             });
             lucide.createIcons();
+        }
+
+        // NUEVO: Función para Desplegar/Cerrar el contenido del archivo
+        async function toggleDocument(filename, contentId, iconId) {
+            const contentDiv = document.getElementById(contentId);
+            const icon = document.getElementById(iconId);
+
+            if (contentDiv.classList.contains('hidden')) {
+                // Expandir
+                contentDiv.classList.remove('hidden');
+                icon.classList.add('rotate-180');
+
+                // Si no se ha cargado el contenido antes, hacemos la petición a la API
+                if (contentDiv.dataset.loaded === 'false') {
+                    try {
+                        contentDiv.innerHTML = '<div class="flex justify-center items-center py-4 text-gray-400"><i data-lucide="loader-2" class="w-6 h-6 animate-spin text-[#17243d]"></i></div>';
+                        lucide.createIcons();
+
+                        const response = await fetch(`${API_BASE}/${filename}`);
+                        if (!response.ok) throw new Error('No se pudo cargar el archivo');
+                        
+                        const text = await response.text();
+                        contentDiv.textContent = text; // textContent previene inyección HTML
+                        contentDiv.dataset.loaded = 'true';
+                    } catch (error) {
+                        console.error(error);
+                        contentDiv.textContent = '❌ Error al cargar el contenido del documento.';
+                        contentDiv.classList.add('text-[#ff0000]');
+                    }
+                }
+            } else {
+                // Contraer
+                contentDiv.classList.add('hidden');
+                icon.classList.remove('rotate-180');
+            }
         }
 
         // Subir documento
@@ -238,8 +294,33 @@
             }
         });
 
+        // Descargar documento
+        async function downloadDocument(event, filename) {
+            event.stopPropagation(); // Evita que se despliegue el acordeón al hacer clic
+            try {
+                const response = await fetch(`${API_BASE}/${filename}`);
+                if (!response.ok) throw new Error('Error al descargar el archivo desde el servidor.');
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = filename; 
+                document.body.appendChild(a);
+                a.click(); 
+                window.URL.revokeObjectURL(url); 
+                
+                showToast(`Documento ${filename} descargado con éxito.`, 'success');
+            } catch (error) {
+                console.error(error);
+                showToast(error.message, 'error');
+            }
+        }
+
         // Eliminar documento
-        async function deleteDocument(filename) {
+        async function deleteDocument(event, filename) {
+            event.stopPropagation(); // Evita que se despliegue el acordeón al hacer clic
             if (!confirm(`¿Estás seguro de que deseas eliminar "${filename}"? \nAsistente-DBP olvidará toda la información contenida en él.`)) return;
 
             try {
