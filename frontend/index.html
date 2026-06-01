@@ -23,6 +23,11 @@
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.05); }
         ::-webkit-scrollbar-thumb { background: #17243d; border-radius: 10px; }
+
+        /* Scrollbar interno para el textarea */
+        textarea::-webkit-scrollbar { width: 4px; }
+        textarea::-webkit-scrollbar-track { background: transparent; }
+        textarea::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         
         /* Animaciones para Procesando */
         @keyframes pulse-red {
@@ -136,16 +141,15 @@
                 </div>
             </div>
 
-            <!-- Input de Usuario -->
-            <div class="relative flex items-center mt-auto">
-                <input id="user-input" type="text" 
-                    class="w-full bg-white border border-gray-300 rounded-xl py-3 pl-4 pr-24 text-sm text-gray-900 focus:outline-none focus:border-[#17243d] focus:ring-1 focus:ring-[#17243d] transition-all placeholder-gray-400 shadow-sm"
-                    placeholder="Escribe tu consulta aquí..." 
-                    autocomplete="off">
+            <!-- Input de Usuario (Refactorizado con Textarea expandible) -->
+            <div class="relative flex items-end mt-auto bg-white border border-gray-300 rounded-xl shadow-sm focus-within:border-[#17243d] focus-within:ring-1 focus-within:ring-[#17243d] transition-all">
+                <textarea id="user-input" rows="1" 
+                    class="w-full bg-transparent border-none py-3 pl-4 pr-24 text-sm text-gray-900 focus:outline-none focus:ring-0 placeholder-gray-400 resize-none overflow-y-auto block leading-relaxed"
+                    style="min-height: 46px; max-height: 76px;"
+                    placeholder="Escribe tu consulta aquí..."></textarea>
                 
-                <!-- Botón de Micrófono (NUEVO) -->
-                <button id="mic-btn" class="absolute right-12 p-2 text-gray-400 hover:text-[#ff0000] rounded-lg transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed" title="Dictar por voz">
-                    <!-- SVG crudo para evitar bugs de reemplazo con Lucide -->
+                <!-- Botón de Micrófono -->
+                <button id="mic-btn" class="absolute right-12 bottom-1.5 p-2 text-gray-400 hover:text-[#ff0000] rounded-lg transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed" title="Dictar por voz">
                     <svg id="icon-mic" class="w-5 h-5 transition-transform duration-200" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
                         <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
@@ -154,8 +158,7 @@
                 </button>
 
                 <!-- Botón Enviar / Detener -->
-                <button id="send-btn" class="absolute right-2 p-2 bg-[#17243d] hover:bg-[#20325c] text-white rounded-lg transition-colors flex items-center justify-center disabled:opacity-50">
-                    <!-- SVGs crudos -->
+                <button id="send-btn" class="absolute right-2 bottom-1.5 p-2 bg-[#17243d] hover:bg-[#20325c] text-white rounded-lg transition-colors flex items-center justify-center disabled:opacity-50">
                     <svg id="icon-send" class="w-4 h-4 block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="22" y1="2" x2="11" y2="13"></line>
                         <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
@@ -168,7 +171,7 @@
         </div>
     </div>
 
-    <!-- Si el script local falla por CORS o ruta en el Canvas, asegúrate de mantenerlo en tu entorno local -->
+    <!-- Script de Godot -->
     <script src="../Export_Avatar/avatar.js"></script>
 
     <script>
@@ -180,7 +183,6 @@
         const loadingProgress = document.getElementById('loading-progress');
         const loadingScreen = document.getElementById('godot-loading');
         
-        // Creamos la instancia del motor de Godot basado en avatar.js
         const engine = new Engine({
             "args": [],
             "canvasResizePolicy": 2, 
@@ -190,7 +192,6 @@
             "gdextensionLibs": []
         });
 
-        // Iniciamos el engine y manejamos la barra de carga de los binarios
         engine.startGame({
             'onProgress': function (current, total) {
                 if (total > 0) {
@@ -202,7 +203,7 @@
             loadingScreen.style.display = 'none';
             console.log("Motor Godot cargado e iniciado con éxito.");
 
-            // --- CORRECCIÓN DE TÍTULO E ÍCONO ---
+            // Restaurar íconos
             document.title = "Asistente DBP";
             const icons = document.querySelectorAll("link[rel~='icon']");
             icons.forEach(icon => icon.remove());
@@ -211,19 +212,14 @@
             myIcon.href = '../Export_Avatar/avatar.icon.png';
             myIcon.type = 'image/x-icon';
             document.head.appendChild(myIcon);
-            // ------------------------------------------------------
-
         }).catch(e => {
             console.error("Error al cargar Godot Engine:", e);
             loadingScreen.innerText = "Error cargando Avatar";
             loadingScreen.style.color = "red";
         });
 
-        // ==========================================
         // PUENTE DE COMUNICACIÓN JS -> GODOT
-        // ==========================================
         window.godotReceiveState = null;
-
         function setAvatarState(state) {
             console.log("Enviando estado a Godot:", state);
             if (window.godotReceiveState) {
@@ -294,67 +290,72 @@
         }
 
         // ==========================================
-        // 3. RECONOCIMIENTO DE VOZ (SPEECH-TO-TEXT)
+        // 3. RECONOCIMIENTO DE VOZ Y LÓGICA UI
         // ==========================================
+        const chatHistory = document.getElementById('chat-history');
+        const userInput = document.getElementById('user-input');
         const micBtn = document.getElementById('mic-btn');
         const iconMic = document.getElementById('icon-mic');
+        const sendBtn = document.getElementById('send-btn');
+        const iconSend = document.getElementById('icon-send');
+        const iconStop = document.getElementById('icon-stop');
+        const statusIndicator = document.getElementById('status-indicator');
+        const statusText = document.getElementById('status-text');
+
         let recognition = null;
         let isRecording = false;
-        let speechTimeout = null; // NUEVO: Temporizador para detectar silencios
+        let speechTimeout = null;
 
+        // Auto-resize de Textarea
+        function autoResizeInput() {
+            userInput.style.height = 'auto';
+            userInput.style.height = (userInput.scrollHeight) + 'px';
+        }
+        userInput.addEventListener('input', autoResizeInput);
+
+        // Web Speech API
         if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognition = new SpeechRecognition();
-            recognition.lang = 'es-ES'; // Idioma español
-            recognition.continuous = true; // NUEVO: Mantener escuchando hasta detenerlo manualmente
-            recognition.interimResults = true; // Mostrar resultados parciales mientras se habla
+            recognition.lang = 'es-ES';
+            recognition.continuous = true;
+            recognition.interimResults = true;
 
             recognition.onstart = () => {
                 isRecording = true;
                 userInput.placeholder = "Escuchando...";
                 iconMic.classList.add('mic-active');
-                
-                // Temporizador inicial: si enciende el micro y no dice nada en 3 segundos, se apaga
                 clearTimeout(speechTimeout);
-                speechTimeout = setTimeout(() => {
-                    if (isRecording) recognition.stop();
-                }, 3000);
+                speechTimeout = setTimeout(() => { if (isRecording) recognition.stop(); }, 3000);
             };
 
             recognition.onresult = (event) => {
                 let transcript = '';
-
-                // Al ser "continuous=true", debemos reconstruir todo el historial de la sesión
                 for (let i = 0; i < event.results.length; ++i) {
                     transcript += event.results[i][0].transcript;
                 }
-                
-                // Actualizar el input con lo que se va escuchando
                 userInput.value = transcript;
-
-                // NUEVO: Reiniciar el temporizador cada vez que detecta voz
+                autoResizeInput(); // Ajustar altura al dictar
+                
+                // NUEVO: Auto-scroll al final para que el texto siempre sea visible al dictar
+                userInput.scrollTop = userInput.scrollHeight; 
+                
                 clearTimeout(speechTimeout);
-                speechTimeout = setTimeout(() => {
-                    if (isRecording) {
-                        recognition.stop(); // Detener al alcanzar 2 segundos exactos de silencio
-                    }
-                }, 2000);
+                speechTimeout = setTimeout(() => { if (isRecording) recognition.stop(); }, 2000);
             };
 
             recognition.onend = () => {
                 isRecording = false;
                 userInput.placeholder = "Escribe tu consulta aquí...";
                 iconMic.classList.remove('mic-active');
-                clearTimeout(speechTimeout); // Limpiar temporizador por seguridad
+                clearTimeout(speechTimeout);
                 
-                // Autocompletar el flujo: si detectó texto, lo envía solo.
                 if (userInput.value.trim().length > 0 && !isProcessing) {
                     sendMessage();
                 }
             };
 
-            recognition.onerror = (event) => {
-                console.error("Error en reconocimiento de voz:", event.error);
+            recognition.onerror = () => {
                 isRecording = false;
                 userInput.placeholder = "Escribe tu consulta aquí...";
                 iconMic.classList.remove('mic-active');
@@ -365,26 +366,18 @@
                 if (isRecording) {
                     recognition.stop();
                 } else {
-                    userInput.value = ''; // Limpiar el input para el nuevo dictado
+                    userInput.value = '';
+                    autoResizeInput();
                     recognition.start();
                 }
             });
         } else {
-            console.warn("La Web Speech API no está soportada en este navegador.");
-            micBtn.style.display = 'none'; // Ocultar si el navegador no lo soporta
+            micBtn.style.display = 'none';
         }
 
         // ==========================================
         // 4. LÓGICA DE INTERACCIÓN Y STREAMING
         // ==========================================
-        const chatHistory = document.getElementById('chat-history');
-        const userInput = document.getElementById('user-input');
-        const sendBtn = document.getElementById('send-btn');
-        const iconSend = document.getElementById('icon-send');
-        const iconStop = document.getElementById('icon-stop');
-        const statusIndicator = document.getElementById('status-indicator');
-        const statusText = document.getElementById('status-text');
-
         let currentAbortController = null;
         let displayQueue = ""; 
         let typingInterval = null; 
@@ -421,14 +414,16 @@
             const text = userInput.value.trim();
             if (!text) return;
 
-            // Cortar voz previa si el usuario envía algo nuevo
             if (isAudioEnabled) synth.cancel();
 
             addUserMessage(text);
+            
+            // Limpiar input y restaurar altura a 1 línea
             userInput.value = '';
+            autoResizeInput();
             
             isProcessing = true;
-            micBtn.disabled = true; // Bloquear micrófono mientras procesa
+            micBtn.disabled = true; 
             
             statusIndicator.classList.remove('bg-emerald-500');
             statusIndicator.classList.add('status-processing');
@@ -474,7 +469,6 @@
             currentAbortController = new AbortController();
 
             try {
-                // LLAMADA AL BACKEND
                 const response = await fetch('http://localhost:8000/chat/stream', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -546,7 +540,7 @@
             } finally {
                 isProcessing = false;
                 currentAbortController = null;
-                micBtn.disabled = false; // Desbloquear micrófono
+                micBtn.disabled = false; 
                 
                 statusIndicator.classList.remove('status-processing');
                 statusIndicator.classList.add('bg-emerald-500');
@@ -568,8 +562,14 @@
         }
 
         sendBtn.addEventListener('click', sendMessage);
-        userInput.addEventListener('keypress', (e) => { 
-            if (e.key === 'Enter' && !isProcessing) sendMessage(); 
+        
+        // Manejo del evento teclado para el textarea
+        userInput.addEventListener('keydown', (e) => { 
+            // Si presiona Enter SIN la tecla Shift, enviamos el mensaje
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault(); // Evitamos que salte de línea
+                if (!isProcessing) sendMessage(); 
+            }
         });
     </script>
 </body>
