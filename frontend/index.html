@@ -31,6 +31,14 @@
         }
         .status-processing { animation: pulse-red 2s infinite; background-color: #ff0000 !important; }
         
+        /* Animación para el Micrófono Activo */
+        @keyframes pulse-mic {
+            0% { transform: scale(1); color: #60b9f8; }
+            50% { transform: scale(1.15); color: #60b9f8; filter: drop-shadow(0 0 4px rgba(96, 185, 248, 0.5)); }
+            100% { transform: scale(1); color: #60b9f8; }
+        }
+        .mic-active { animation: pulse-mic 1.2s infinite alternate !important; color: #60b9f8 !important; }
+
         /* Cursor de tipeo blanco */
         .typing-cursor::after {
             content: '█';
@@ -131,10 +139,23 @@
             <!-- Input de Usuario -->
             <div class="relative flex items-center mt-auto">
                 <input id="user-input" type="text" 
-                    class="w-full bg-white border border-gray-300 rounded-xl py-3 pl-4 pr-12 text-sm text-gray-900 focus:outline-none focus:border-[#17243d] focus:ring-1 focus:ring-[#17243d] transition-all placeholder-gray-400 shadow-sm"
+                    class="w-full bg-white border border-gray-300 rounded-xl py-3 pl-4 pr-24 text-sm text-gray-900 focus:outline-none focus:border-[#17243d] focus:ring-1 focus:ring-[#17243d] transition-all placeholder-gray-400 shadow-sm"
                     placeholder="Escribe tu consulta aquí..." 
                     autocomplete="off">
-                <button id="send-btn" class="absolute right-2 p-2 bg-[#17243d] hover:bg-[#20325c] text-white rounded-lg transition-colors flex items-center justify-center">
+                
+                <!-- Botón de Micrófono (NUEVO) -->
+                <button id="mic-btn" class="absolute right-12 p-2 text-gray-400 hover:text-[#ff0000] rounded-lg transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed" title="Dictar por voz">
+                    <!-- SVG crudo para evitar bugs de reemplazo con Lucide -->
+                    <svg id="icon-mic" class="w-5 h-5 transition-transform duration-200" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                        <line x1="12" y1="19" x2="12" y2="22"></line>
+                    </svg>
+                </button>
+
+                <!-- Botón Enviar / Detener -->
+                <button id="send-btn" class="absolute right-2 p-2 bg-[#17243d] hover:bg-[#20325c] text-white rounded-lg transition-colors flex items-center justify-center disabled:opacity-50">
+                    <!-- SVGs crudos -->
                     <svg id="icon-send" class="w-4 h-4 block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="22" y1="2" x2="11" y2="13"></line>
                         <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
@@ -182,21 +203,14 @@
             console.log("Motor Godot cargado e iniciado con éxito.");
 
             // --- CORRECCIÓN DE TÍTULO E ÍCONO ---
-            
-            // 1. Forzamos el título de vuelta al original
             document.title = "Asistente DBP";
-            
-            // 2. Removemos TODOS los íconos (incluyendo el inyectado por Godot)
             const icons = document.querySelectorAll("link[rel~='icon']");
             icons.forEach(icon => icon.remove());
-            
-            // 3. Reinyectamos tu ícono personalizado de forma estricta
             const myIcon = document.createElement('link');
             myIcon.rel = 'icon';
             myIcon.href = '../Export_Avatar/avatar.icon.png';
             myIcon.type = 'image/x-icon';
             document.head.appendChild(myIcon);
-            
             // ------------------------------------------------------
 
         }).catch(e => {
@@ -208,13 +222,12 @@
         // ==========================================
         // PUENTE DE COMUNICACIÓN JS -> GODOT
         // ==========================================
-        // Variable global donde Godot inyectará su función
         window.godotReceiveState = null;
 
         function setAvatarState(state) {
             console.log("Enviando estado a Godot:", state);
             if (window.godotReceiveState) {
-                window.godotReceiveState(state); // Llama a Godot
+                window.godotReceiveState(state);
             }
         }
 
@@ -266,14 +279,14 @@
             utterance.onstart = () => {
                 headerContainer.classList.add('is-speaking');
                 displayQueue += text;
-                setAvatarState("SPEAKING"); // <-- Avatar a Hablando
+                setAvatarState("SPEAKING"); 
             };
 
             utterance.onend = () => {
                 window.utterances = window.utterances.filter(u => u !== utterance);
                 if (!synth.speaking && !synth.pending) {
                     headerContainer.classList.remove('is-speaking');
-                    setAvatarState("IDLE"); // <-- Avatar a Reposo
+                    setAvatarState("IDLE"); 
                 }
             };
             
@@ -281,7 +294,88 @@
         }
 
         // ==========================================
-        // 3. LÓGICA DE INTERACCIÓN Y STREAMING
+        // 3. RECONOCIMIENTO DE VOZ (SPEECH-TO-TEXT)
+        // ==========================================
+        const micBtn = document.getElementById('mic-btn');
+        const iconMic = document.getElementById('icon-mic');
+        let recognition = null;
+        let isRecording = false;
+        let speechTimeout = null; // NUEVO: Temporizador para detectar silencios
+
+        if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'es-ES'; // Idioma español
+            recognition.continuous = true; // NUEVO: Mantener escuchando hasta detenerlo manualmente
+            recognition.interimResults = true; // Mostrar resultados parciales mientras se habla
+
+            recognition.onstart = () => {
+                isRecording = true;
+                userInput.placeholder = "Escuchando...";
+                iconMic.classList.add('mic-active');
+                
+                // Temporizador inicial: si enciende el micro y no dice nada en 3 segundos, se apaga
+                clearTimeout(speechTimeout);
+                speechTimeout = setTimeout(() => {
+                    if (isRecording) recognition.stop();
+                }, 3000);
+            };
+
+            recognition.onresult = (event) => {
+                let transcript = '';
+
+                // Al ser "continuous=true", debemos reconstruir todo el historial de la sesión
+                for (let i = 0; i < event.results.length; ++i) {
+                    transcript += event.results[i][0].transcript;
+                }
+                
+                // Actualizar el input con lo que se va escuchando
+                userInput.value = transcript;
+
+                // NUEVO: Reiniciar el temporizador cada vez que detecta voz
+                clearTimeout(speechTimeout);
+                speechTimeout = setTimeout(() => {
+                    if (isRecording) {
+                        recognition.stop(); // Detener al alcanzar 2 segundos exactos de silencio
+                    }
+                }, 2000);
+            };
+
+            recognition.onend = () => {
+                isRecording = false;
+                userInput.placeholder = "Escribe tu consulta aquí...";
+                iconMic.classList.remove('mic-active');
+                clearTimeout(speechTimeout); // Limpiar temporizador por seguridad
+                
+                // Autocompletar el flujo: si detectó texto, lo envía solo.
+                if (userInput.value.trim().length > 0 && !isProcessing) {
+                    sendMessage();
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.error("Error en reconocimiento de voz:", event.error);
+                isRecording = false;
+                userInput.placeholder = "Escribe tu consulta aquí...";
+                iconMic.classList.remove('mic-active');
+                clearTimeout(speechTimeout);
+            };
+
+            micBtn.addEventListener('click', () => {
+                if (isRecording) {
+                    recognition.stop();
+                } else {
+                    userInput.value = ''; // Limpiar el input para el nuevo dictado
+                    recognition.start();
+                }
+            });
+        } else {
+            console.warn("La Web Speech API no está soportada en este navegador.");
+            micBtn.style.display = 'none'; // Ocultar si el navegador no lo soporta
+        }
+
+        // ==========================================
+        // 4. LÓGICA DE INTERACCIÓN Y STREAMING
         // ==========================================
         const chatHistory = document.getElementById('chat-history');
         const userInput = document.getElementById('user-input');
@@ -320,19 +414,22 @@
                 if (typingInterval) clearInterval(typingInterval);
                 headerContainer.classList.remove('is-speaking'); 
                 if (activeBubble) activeBubble.classList.remove('typing-cursor');
-                setAvatarState("IDLE"); // <-- Avatar a Reposo si aborta
+                setAvatarState("IDLE"); 
                 return;
             }
 
             const text = userInput.value.trim();
             if (!text) return;
 
+            // Cortar voz previa si el usuario envía algo nuevo
             if (isAudioEnabled) synth.cancel();
 
             addUserMessage(text);
             userInput.value = '';
             
             isProcessing = true;
+            micBtn.disabled = true; // Bloquear micrófono mientras procesa
+            
             statusIndicator.classList.remove('bg-emerald-500');
             statusIndicator.classList.add('status-processing');
             statusText.textContent = 'Procesando (Pensando)...';
@@ -343,7 +440,7 @@
             iconSend.classList.replace('block', 'hidden');
             iconStop.classList.replace('hidden', 'block');
 
-            setAvatarState("THINKING"); // <-- Avatar a Pensando
+            setAvatarState("THINKING"); 
 
             activeBubble = createBotMessageBubble();
             let speechBuffer = "";
@@ -449,6 +546,7 @@
             } finally {
                 isProcessing = false;
                 currentAbortController = null;
+                micBtn.disabled = false; // Desbloquear micrófono
                 
                 statusIndicator.classList.remove('status-processing');
                 statusIndicator.classList.add('bg-emerald-500');
@@ -457,9 +555,9 @@
 
                 if (isAudioEnabled && !synth.speaking && !synth.pending) {
                      headerContainer.classList.remove('is-speaking');
-                     setAvatarState("IDLE"); // <-- Avatar a Reposo (con audio)
+                     setAvatarState("IDLE"); 
                 } else if (!isAudioEnabled) {
-                     setAvatarState("IDLE"); // <-- Avatar a Reposo (sin audio)
+                     setAvatarState("IDLE"); 
                 }
 
                 sendBtn.classList.replace('bg-[#ff0000]', 'bg-[#17243d]');
