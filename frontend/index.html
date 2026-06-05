@@ -65,13 +65,21 @@
            ESTILOS PARA EL CONTENEDOR DE GODOT
            ========================================== */
         #godot-container {
-            position: absolute;
-            bottom: 300px; 
-            left: 250px;   
-            width: 350px; 
-            height: 350px;
+            position: relative;
+            width: 100%;
+            height: 70vh;
             z-index: 5;
-            pointer-events: none; 
+            pointer-events: none;
+        }
+
+        @media (min-width: 768px) {
+            #godot-container {
+                position: absolute;
+                bottom: 300px; 
+                left: 250px;
+                width: 350px; 
+                height: 350px;
+            }
         }
 
         #canvas {
@@ -113,10 +121,10 @@
     </div>
 
     <!-- Interfaz de Usuario (UI) superpuesta -->
-    <div class="relative z-10 w-full md:w-1/3 max-w-md h-full ml-auto p-4 md:p-6 flex flex-col justify-end md:justify-center pointer-events-none">
+    <div class="relative z-10 w-full h-[30vh] md:h-full md:w-1/3 md:max-w-md ml-0 md:ml-auto p-4 md:p-6 flex flex-col justify-end pointer-events-none">
         
         <!-- Panel de Chat -->
-        <div class="bg-[#f3f4f6]/95 backdrop-blur-md border border-gray-200 rounded-2xl p-4 shadow-2xl shadow-black/10 pointer-events-auto flex flex-col h-[70vh] md:h-[80vh] transition-all">
+        <div class="bg-[#f3f4f6]/95 backdrop-blur-md border border-gray-200 rounded-2xl p-4 shadow-2xl shadow-black/10 pointer-events-auto flex flex-col h-full transition-all">
             
             <!-- Cabecera del Asistente -->
             <div id="header-container" class="flex items-center justify-between border-b border-gray-200 pb-4 mb-4 transition-colors">

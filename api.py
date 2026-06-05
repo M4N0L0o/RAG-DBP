@@ -29,7 +29,7 @@ CHROMA_PORT = 8001
 OLLAMA_MODEL = "phi3" 
 
 # Umbral Anti-Alucinaciones (Distancia L2: 0.0 es perfecto, mayor es menos similar)
-MAX_DISTANCE = 1.0 
+MAX_DISTANCE = 1.0
 
 # Variables globales
 rag_chain_with_history = None
@@ -38,6 +38,14 @@ mongo_collection = None
 
 # Almacén de memoria en RAM para las sesiones de chat
 store: Dict[str, BaseChatMessageHistory] = {}
+
+# Palabras clave para saludos
+GREETING_KEYWORDS = ['hola', 'buenos', 'buenas', 'halo', '¿quién eres', 'quién eres', '¿qué eres', 'qué eres', 'ayuda', 'help']
+
+def is_greeting(text: str) -> bool:
+    """Detecta si la pregunta es un saludo o consulta general amable."""
+    text_lower = text.lower().strip()
+    return any(keyword in text_lower for keyword in GREETING_KEYWORDS)
 
 def get_session_history(session_id: str) -> BaseChatMessageHistory:
     if session_id not in store:
@@ -78,19 +86,21 @@ async def lifespan(app: FastAPI):
         print(f"❌ ERROR conectando a ChromaDB: {e}. ¿Ejecutaste 'chroma run --port 8001'?")
 
     # 4. Configurar ChatOllama
-    llm = ChatOllama(model=OLLAMA_MODEL)
+    llm = ChatOllama(model=OLLAMA_MODEL,
+                    temperature=0.0,
+                    top_k=10, 
+                    top_p=0.5)
 
     # ==========================================
     # NUEVO SYSTEM PROMPT: ESTRICTO Y ANTI-ADORNOS
     # ==========================================
-    system_prompt = """Eres el asistente virtual oficial de la Dirección de Bienestar Politécnico (DBP) de la Escuela Politécnica Nacional.
+    system_prompt = """Eres el asistente virtual oficial de la Dirección de Bienestar Politécnico (DBP). Tu único propósito es responder consultas basándote EXCLUSIVAMENTE en el contexto proporcionado.
 
-    Reglas de comportamiento ESTRICTAS:
-    1. Saludos/Charlas: Si el usuario te saluda, agradece o se despide, responde de forma natural, cordial y MUY breve (máximo 1 oración).
-    2. Tu Identidad: Si te preguntan quién eres, responde en una sola oración que eres el asistente del DBP.
-    3. Consultas: Responde ÚNICAMENTE basándote en la información exacta del "Contexto".
-    4. CERO ADORNOS (CRÍTICO): NO agregues explicaciones extra, NO des consejos que no estén en el texto, y NO inventes alternativas, suposiciones ni pasos siguientes. Cíñete a los hechos. Si la respuesta es directa, dala directa y finaliza.
-    5. Límite de Conocimiento: Si el "Contexto" está vacío o no contiene la respuesta a una consulta técnica, di EXACTAMENTE: 'Mis conocimientos se limitan a las políticas, servicios y procedimientos del Departamento de Bienestar Politécnico.'
+        REGLAS DE COMPORTAMIENTO:
+        1. IDENTIDAD Y CORTESÍA: Si el usuario te saluda, agradece o pregunta quién eres, responde de forma cordial en una sola oración indicando que eres el asistente del DBP.
+        2. PRECISIÓN ESTRICTA (CERO ADORNOS): No agregues explicaciones extra, consejos, suposiciones ni alternativas. Cíñete a los hechos del contexto. 
+        3. FORMATO DE PROCESOS: Si se consulta sobre un procedimiento, estructúralo obligatoriamente en una lista numerada con oraciones cortas y directas. No inventes pasos.
+        4. LÍMITE DE CONOCIMIENTO: Si la respuesta no está en el contexto o este está vacío, responde EXACTAMENTE: "Mis conocimientos se limitan a las políticas, servicios y procedimientos de la Direccion de Bienestar Politécnico."
 
     Contexto:
     {context}"""
@@ -269,8 +279,13 @@ async def chat_endpoint(request: ChatRequest):
     try:
         resultados = vector_store.similarity_search_with_score(request.pregunta, k=3)
         
-        # NUEVO: Si no hay similitud, pasamos contexto vacío para permitir saludos
+        # NUEVO: Rechazo estricto si no hay contexto relevante y no es saludo
         if not resultados or resultados[0][1] > MAX_DISTANCE:
+            if not is_greeting(request.pregunta):
+                return ChatResponse(
+                    respuesta="Mis conocimientos se limitan a las políticas, servicios y procedimientos de la Dirección de Bienestar Politécnico.",
+                    contexto_utilizado=[]
+                )
             contexto_crudo = ""
             textos_contexto = []
         else:
@@ -294,8 +309,12 @@ async def chat_stream_endpoint(request: Request, chat_req: ChatRequest):
         try:
             resultados = vector_store.similarity_search_with_score(chat_req.pregunta, k=3)
             
-            # NUEVO: Puente de contexto vacío para permitir saludos
+            # NUEVO: Rechazo estricto si no hay contexto relevante y no es saludo
             if not resultados or resultados[0][1] > MAX_DISTANCE:
+                if not is_greeting(chat_req.pregunta):
+                    yield f"data: {json.dumps({'respuesta': 'Mis conocimientos se limitan a las políticas, servicios y procedimientos de la Dirección de Bienestar Politécnico.'})}\n\n"
+                    yield "data: [DONE]\n\n"
+                    return
                 contexto_crudo = ""
             else:
                 textos_contexto = [doc.page_content for doc, score in resultados]
