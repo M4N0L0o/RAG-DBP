@@ -4,6 +4,7 @@ import asyncio
 import re
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Response
+from fastapi.staticfiles import StaticFiles # Importación para servir HTML
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -29,7 +30,7 @@ CHROMA_PORT = 8001
 OLLAMA_MODEL = "phi3" 
 
 # Umbral Anti-Alucinaciones (Distancia L2: 0.0 es perfecto, mayor es menos similar)
-MAX_DISTANCE = 1.0
+MAX_DISTANCE = 2.0
 
 # Variables globales
 rag_chain_with_history = None
@@ -40,7 +41,7 @@ mongo_collection = None
 store: Dict[str, BaseChatMessageHistory] = {}
 
 # Palabras clave para saludos
-GREETING_KEYWORDS = ['hola', 'buenos', 'buenas', 'halo', '¿quién eres', 'quién eres', '¿qué eres', 'qué eres', 'ayuda', 'help']
+GREETING_KEYWORDS = ['hola', 'buenos', 'buenas', 'halo', '¿quién eres', 'cual es tu nombre', 'como te llamas', 'quién eres', 'qué eres', 'ayuda', 'bye', 'adios', 'gracias']
 
 def is_greeting(text: str) -> bool:
     """Detecta si la pregunta es un saludo o consulta general amable."""
@@ -87,7 +88,7 @@ async def lifespan(app: FastAPI):
 
     # 4. Configurar ChatOllama
     llm = ChatOllama(model=OLLAMA_MODEL,
-                    temperature=0.0,
+                    temperature=0.5,
                     top_k=10, 
                     top_p=0.5)
 
@@ -148,7 +149,6 @@ async def list_documents():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# NUEVO ENDPOINT: Descargar archivo específico
 @app.get("/api/documents/{filename}")
 async def download_document(filename: str):
     if mongo_collection is None:
@@ -158,7 +158,6 @@ async def download_document(filename: str):
         if not doc:
             raise HTTPException(status_code=404, detail="Archivo no encontrado en la base de datos.")
         
-        # Devolvemos el texto plano forzando la descarga con las cabeceras HTTP
         return Response(
             content=doc.get("content", ""), 
             media_type="text/plain", 
@@ -178,7 +177,6 @@ async def upload_document(file: UploadFile = File(...)):
         content_bytes = await file.read()
         text_content = content_bytes.decode("utf-8")
         
-        # Blindaje contra archivos vacíos (Evita el bug 'got [] in upsert')
         if not text_content.strip():
             raise HTTPException(status_code=400, detail="El archivo está vacío o no contiene texto legible.")
         
@@ -190,7 +188,6 @@ async def upload_document(file: UploadFile = File(...)):
         
         vector_store._collection.delete(where={"source": file.filename})
         
-        # Chunking Semántico
         semantic_chunks = []
         current_section = "0"
         current_title = "General"
@@ -233,7 +230,6 @@ async def upload_document(file: UploadFile = File(...)):
             else:
                 final_chunks.append(chunk)
 
-        # Doble blindaje
         if not final_chunks:
              raise HTTPException(status_code=400, detail="No se pudieron generar fragmentos válidos del texto.")
         
@@ -279,7 +275,6 @@ async def chat_endpoint(request: ChatRequest):
     try:
         resultados = vector_store.similarity_search_with_score(request.pregunta, k=3)
         
-        # NUEVO: Rechazo estricto si no hay contexto relevante y no es saludo
         if not resultados or resultados[0][1] > MAX_DISTANCE:
             if not is_greeting(request.pregunta):
                 return ChatResponse(
@@ -309,7 +304,6 @@ async def chat_stream_endpoint(request: Request, chat_req: ChatRequest):
         try:
             resultados = vector_store.similarity_search_with_score(chat_req.pregunta, k=3)
             
-            # NUEVO: Rechazo estricto si no hay contexto relevante y no es saludo
             if not resultados or resultados[0][1] > MAX_DISTANCE:
                 if not is_greeting(chat_req.pregunta):
                     yield f"data: {json.dumps({'respuesta': 'Mis conocimientos se limitan a las políticas, servicios y procedimientos de la Dirección de Bienestar Politécnico.'})}\n\n"
@@ -338,6 +332,12 @@ async def chat_stream_endpoint(request: Request, chat_req: ChatRequest):
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+# ==========================================
+# MAGIA DE FASTAPI: Servir la carpeta frontend
+# ==========================================
+# Le indicamos a FastAPI que busque en la carpeta 'frontend' para servir la interfaz web
+app.mount("/", StaticFiles(directory="frontend", html=True), name="static")
 
 if __name__ == "__main__":
     import uvicorn
