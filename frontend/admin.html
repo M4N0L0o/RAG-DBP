@@ -3,124 +3,257 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Administración RAG</title>
+    <title>Administración RAG - DBP</title>
     <link rel="icon" href="../Export_Avatar/avatar.icon.png" type="image/x-icon">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        /* Fondo corporativo claro */
         body { background-color: #f3f4f6; }
         
-        /* Animación para toasts */
         @keyframes slideIn {
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
         .toast-enter { animation: slideIn 0.3s ease-out forwards; }
 
-        /* Estilo para la barra de desplazamiento interna del contenido */
         .content-scroll::-webkit-scrollbar { width: 6px; }
         .content-scroll::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.05); }
         .content-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         .content-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        .hidden-auth { display: none !important; }
     </style>
 </head>
-<body class="text-[#17243d] font-sans antialiased min-h-screen flex flex-col">
+<body class="text-[#17243d] font-sans antialiased min-h-screen flex flex-col relative">
 
-    <!-- Navbar Primaria (#17243d) -->
-    <nav class="bg-[#17243d] text-white p-4 shadow-lg sticky top-0 z-50">
-        <div class="max-w-5xl mx-auto flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <i data-lucide="database" class="w-6 h-6 text-[#ff0000]"></i>
-                <h1 class="text-xl font-bold tracking-wider">Panel Administrativo RAG</h1>
-            </div>
-            <!-- Enlace de regreso al Asistente -->
-            <a href="index.html" class="flex items-center gap-2 text-sm text-gray-300 hover:text-white transition-colors bg-white/10 px-4 py-2 rounded-lg">
-                <i data-lucide="monitor" class="w-4 h-4"></i>
-                <span>Ver Asistente</span>
-            </a>
-        </div>
-    </nav>
-
-    <!-- Contenido Principal -->
-    <main class="flex-1 max-w-5xl w-full mx-auto p-6 md:p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        <!-- Columna Izquierda: Subida de Archivos -->
-        <section class="lg:col-span-1 space-y-6">
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-                <div class="flex items-center gap-3 border-b border-gray-100 pb-4 mb-4">
-                    <div class="p-2 bg-[#17243d]/10 text-[#17243d] rounded-lg">
-                        <i data-lucide="upload-cloud" class="w-5 h-5"></i>
-                    </div>
-                    <h2 class="text-lg font-semibold">Cargar Conocimiento</h2>
+    <!-- PANTALLA DE LOGIN -->
+    <div id="login-screen" class="fixed inset-0 z-[100] bg-[#f3f4f6] flex items-center justify-center transition-opacity duration-300">
+        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100">
+            <div class="flex flex-col items-center mb-8">
+                <div class="w-16 h-16 bg-[#17243d] text-white rounded-2xl flex items-center justify-center mb-4 shadow-lg">
+                    <i data-lucide="shield-check" class="w-8 h-8"></i>
                 </div>
-                
-                <p class="text-sm text-gray-500 mb-6">
-                    Sube archivos de texto plano (.txt) para alimentar el contexto de Asistente-DBP.
-                </p>
-
-                <form id="upload-form" class="space-y-4">
-                    <!-- Dropzone / Input -->
-                    <div class="relative border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:bg-gray-50 transition-colors cursor-pointer group" id="dropzone">
-                        <input type="file" id="file-input" accept=".txt" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" required>
-                        <i data-lucide="file-text" class="w-8 h-8 mx-auto text-gray-400 group-hover:text-[#17243d] mb-2 transition-colors"></i>
-                        <p id="file-name-display" class="text-sm font-medium text-gray-700">Haz clic o arrastra un archivo .txt aquí</p>
-                    </div>
-
-                    <!-- Botón Enviar (Color Primario) -->
-                    <button type="submit" id="submit-btn" class="w-full flex items-center justify-center gap-2 bg-[#17243d] hover:bg-[#20325c] text-white py-3 rounded-xl font-medium transition-colors shadow-md shadow-[#17243d]/20 disabled:opacity-50 disabled:cursor-not-allowed">
-                        <i data-lucide="cpu" class="w-4 h-4"></i>
-                        <span>Procesar e Indexar</span>
-                    </button>
-                </form>
+                <h1 class="text-2xl font-bold text-[#17243d]">Acceso Seguro</h1>
+                <p class="text-sm text-gray-500 mt-1">Gestión de Conocimiento DBP</p>
             </div>
-        </section>
 
-        <!-- Columna Derecha: Lista de Documentos -->
-        <section class="lg:col-span-2">
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-0 overflow-hidden flex flex-col h-full">
-                <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                    <div class="flex items-center gap-3">
-                        <div class="p-2 bg-[#17243d]/10 text-[#17243d] rounded-lg">
-                            <i data-lucide="server" class="w-5 h-5"></i>
+            <form id="login-form" class="space-y-5">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i data-lucide="user" class="w-5 h-5 text-gray-400"></i>
                         </div>
-                        <h2 class="text-lg font-semibold">Base de Datos de Contexto</h2>
+                        <input type="text" id="username" class="pl-10 w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#17243d]/50 focus:border-[#17243d] transition-all" placeholder="admin" required>
                     </div>
-                    <button onclick="fetchDocuments()" class="text-gray-400 hover:text-[#17243d] transition-colors" title="Actualizar lista">
-                        <i data-lucide="refresh-cw" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i data-lucide="lock" class="w-5 h-5 text-gray-400"></i>
+                        </div>
+                        <input type="password" id="password" class="pl-10 w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#17243d]/50 focus:border-[#17243d] transition-all" placeholder="••••••••" required>
+                    </div>
+                </div>
+                <button type="submit" id="btn-login" class="w-full bg-[#17243d] hover:bg-[#20325c] text-white font-semibold py-3 rounded-xl transition-colors shadow-md flex justify-center items-center gap-2">
+                    <span>Ingresar</span>
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- PANEL ADMINISTRATIVO PRINCIPAL -->
+    <div id="main-app" class="hidden-auth flex-1 flex flex-col w-full h-full">
+        <!-- Navbar -->
+        <nav class="bg-[#17243d] text-white p-4 shadow-lg sticky top-0 z-50">
+            <div class="max-w-5xl mx-auto flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <i data-lucide="database" class="w-6 h-6 text-[#ff0000]"></i>
+                    <h1 class="text-xl font-bold tracking-wider">Panel Administrativo RAG</h1>
+                </div>
+                <div class="flex items-center gap-4">
+                    <a href="index.html" class="flex items-center gap-2 text-sm text-gray-300 hover:text-white transition-colors bg-white/10 px-4 py-2 rounded-lg">
+                        <i data-lucide="monitor" class="w-4 h-4"></i>
+                        <span class="hidden sm:inline">Ver Asistente</span>
+                    </a>
+                    
+                    <!-- Botón: Control de Usuarios y Logs -->
+                    <button onclick="toggleSystemView()" class="flex items-center justify-center gap-2 text-sm text-white transition-colors bg-white/20 hover:bg-white/30 px-3 py-2 rounded-lg" title="Usuarios y Auditoría">
+                        <i data-lucide="users" class="w-5 h-5"></i>
+                    </button>
+
+                    <button onclick="logout()" class="flex items-center justify-center gap-2 text-sm text-[#ff0000] hover:text-red-400 transition-colors bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg">
+                        <i data-lucide="log-out" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Contenido -->
+        <main class="flex-1 max-w-5xl w-full mx-auto p-6 md:p-8">
+            
+            <!-- VISTA 1: BASE DE CONOCIMIENTO (Carga + Documentos) -->
+            <div id="view-rag" class="grid grid-cols-1 lg:grid-cols-3 gap-8 transition-all duration-300">
+                <!-- Izquierda: Carga -->
+                <section class="lg:col-span-1 space-y-6">
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                        <div class="flex items-center gap-3 border-b border-gray-100 pb-4 mb-4">
+                            <div class="p-2 bg-[#17243d]/10 text-[#17243d] rounded-lg">
+                                <i data-lucide="upload-cloud" class="w-5 h-5"></i>
+                            </div>
+                            <h2 class="text-lg font-semibold">Cargar Conocimiento</h2>
+                        </div>
+                        <p class="text-sm text-gray-500 mb-6">Sube archivos de texto (.txt) para alimentar el contexto de Asistente-DBP. Tu acción será auditada.</p>
+
+                        <form id="upload-form" class="space-y-4">
+                            <div class="relative border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:bg-gray-50 transition-colors cursor-pointer group" id="dropzone">
+                                <input type="file" id="file-input" accept=".txt" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" required>
+                                <i data-lucide="file-text" class="w-8 h-8 mx-auto text-gray-400 group-hover:text-[#17243d] mb-2 transition-colors"></i>
+                                <p id="file-name-display" class="text-sm font-medium text-gray-700">Haz clic o arrastra un archivo .txt aquí</p>
+                            </div>
+                            <button type="submit" id="submit-btn" class="w-full flex items-center justify-center gap-2 bg-[#17243d] hover:bg-[#20325c] text-white py-3 rounded-xl font-medium transition-colors shadow-md disabled:opacity-50">
+                                <i data-lucide="cpu" class="w-4 h-4"></i>
+                                <span>Procesar e Indexar</span>
+                            </button>
+                        </form>
+                    </div>
+                </section>
+
+                <!-- Derecha: Listado de Documentos -->
+                <section class="lg:col-span-2">
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-0 overflow-hidden flex flex-col h-full">
+                        <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                            <div class="flex items-center gap-3">
+                                <div class="p-2 bg-[#17243d]/10 text-[#17243d] rounded-lg">
+                                    <i data-lucide="server" class="w-5 h-5"></i>
+                                </div>
+                                <h2 class="text-lg font-semibold">Base de Datos de Contexto</h2>
+                            </div>
+                            <button onclick="fetchDocuments()" class="text-gray-400 hover:text-[#17243d] transition-colors" title="Actualizar lista">
+                                <i data-lucide="refresh-cw" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="flex-1 overflow-y-auto p-4 bg-white min-h-[400px] max-h-[500px] content-scroll">
+                            <div id="loading-state" class="flex flex-col items-center justify-center h-full text-gray-400">
+                                <i data-lucide="loader-2" class="w-8 h-8 animate-spin mb-3 text-[#17243d]"></i>
+                                <p class="text-sm">Conectando con Servidores...</p>
+                            </div>
+                            <div id="empty-state" class="hidden flex flex-col items-center justify-center h-full text-gray-400">
+                                <i data-lucide="folder-open" class="w-12 h-12 mb-3 text-gray-300"></i>
+                                <p class="text-sm">No hay documentos en el contexto.</p>
+                            </div>
+                            <ul id="documents-list" class="space-y-3 hidden"></ul>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- VISTA 2: SISTEMA (Usuarios y Logs) -->
+            <div id="view-system" class="hidden bg-white rounded-2xl shadow-sm border border-gray-200 p-0 overflow-hidden flex flex-col min-h-[550px] transition-all duration-300">
+                
+                <!-- Pestañas -->
+                <div class="flex border-b border-gray-200 bg-gray-50/50">
+                    <button onclick="switchTab('users')" id="tab-users" class="flex-1 py-4 text-center text-sm font-semibold text-[#17243d] border-b-2 border-[#17243d] hover:bg-gray-100 transition-colors flex justify-center items-center gap-2">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i> Usuarios y Roles
+                    </button>
+                    <button onclick="switchTab('logs')" id="tab-logs" class="flex-1 py-4 text-center text-sm font-semibold text-gray-500 border-b-2 border-transparent hover:bg-gray-100 transition-colors flex justify-center items-center gap-2">
+                        <i data-lucide="activity" class="w-4 h-4"></i> Auditoría del Sistema
+                    </button>
+                    <button onclick="toggleSystemView()" class="px-4 text-gray-400 hover:text-red-500 transition-colors border-l border-gray-200" title="Volver a Base de Conocimiento">
+                        <i data-lucide="x" class="w-5 h-5"></i>
                     </button>
                 </div>
                 
-                <!-- Contenedor de la lista -->
-                <div class="flex-1 overflow-y-auto p-4 bg-white min-h-[300px]">
-                    <div id="loading-state" class="flex flex-col items-center justify-center h-full text-gray-400">
-                        <i data-lucide="loader-2" class="w-8 h-8 animate-spin mb-3 text-[#17243d]"></i>
-                        <p class="text-sm">Conectando con MongoDB y ChromaDB...</p>
+                <div class="flex-1 overflow-y-auto p-6 bg-white content-scroll">
+                    
+                    <!-- Contenido Usuarios -->
+                    <div id="content-users" class="space-y-6 max-w-4xl mx-auto">
+                        <!-- Contenedor del Formulario (se oculta para gestores) -->
+                        <div id="create-user-form-container">
+                            <form id="create-user-form" class="bg-[#f3f4f6] p-5 rounded-xl border border-gray-200 space-y-4">
+                                <h3 class="font-semibold text-[#17243d] text-sm flex items-center gap-2">
+                                    <i data-lucide="shield" class="w-4 h-4"></i> Registrar Nuevo Acceso
+                                </h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <input type="text" id="new-username" placeholder="Nombre de usuario" class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-[#17243d] focus:outline-none" required>
+                                    
+                                    <!-- Correo: Validación en el submit en lugar de atributo pattern estricto -->
+                                    <input type="email" id="new-email" placeholder="correo@epn.edu.ec" class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-[#17243d] focus:outline-none" required>
+                                    
+                                    <input type="password" id="new-password" placeholder="Contraseña" class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-[#17243d] focus:outline-none" required>
+                                    
+                                    <!-- Selector de Roles -->
+                                    <select id="new-role" class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-[#17243d] focus:outline-none bg-white">
+                                        <option value="admin">Administrador (Control Total)</option>
+                                        <option value="gestor">Gestor (Solo subir/ver docs)</option>
+                                    </select>
+                                </div>
+                                <button type="submit" id="btn-create-user" class="bg-[#17243d] hover:bg-[#20325c] text-white px-4 py-2 rounded-lg text-sm w-full font-medium transition-colors shadow-sm">
+                                    Crear Usuario
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Lista de Usuarios -->
+                        <div>
+                            <h3 class="font-semibold text-gray-500 text-xs uppercase tracking-wider mb-3">Usuarios Registrados</h3>
+                            <div id="users-loading" class="text-center py-4 text-gray-400 hidden"><i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto"></i></div>
+                            <ul id="users-list" class="space-y-2 grid grid-cols-1 md:grid-cols-2 gap-4"></ul>
+                        </div>
                     </div>
 
-                    <div id="empty-state" class="hidden flex flex-col items-center justify-center h-full text-gray-400">
-                        <i data-lucide="folder-open" class="w-12 h-12 mb-3 text-gray-300"></i>
-                        <p class="text-sm">No hay documentos en el contexto.</p>
-                        <p class="text-xs mt-1">Sube tu primer archivo para entrenar al asistente.</p>
+                    <!-- Contenido Logs -->
+                    <div id="content-logs" class="hidden space-y-4">
+                        <h3 class="font-semibold text-gray-500 text-xs uppercase tracking-wider mb-3 flex justify-between items-center">
+                            <span>Registro Histórico (Últimos 100 eventos)</span>
+                            <button onclick="fetchLogs()" class="hover:text-[#17243d] transition-colors"><i data-lucide="refresh-cw" class="w-4 h-4"></i></button>
+                        </h3>
+                        <div id="logs-loading" class="text-center py-4 text-gray-400 hidden"><i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto"></i></div>
+                        <div class="relative overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
+                            <table class="w-full text-sm text-left text-gray-500">
+                                <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                                    <tr>
+                                        <th scope="col" class="px-4 py-3 border-b">Fecha/Hora</th>
+                                        <th scope="col" class="px-4 py-3 border-b">Usuario</th>
+                                        <th scope="col" class="px-4 py-3 border-b">Acción</th>
+                                        <th scope="col" class="px-4 py-3 border-b">Detalle</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="logs-table-body">
+                                    <!-- Inyectado por JS -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
 
-                    <ul id="documents-list" class="space-y-3 hidden">
-                        <!-- Los items se inyectan mediante JS -->
-                    </ul>
                 </div>
             </div>
-        </section>
-    </main>
+        </main>
+    </div>
 
-    <!-- Contenedor de Alertas (Toasts) -->
+    <!-- Alertas -->
     <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-3"></div>
 
     <script>
         lucide.createIcons();
+        const API_BASE = "http://localhost:8000/api";
+        let JWT_TOKEN = localStorage.getItem('nexus_token');
 
-        const API_BASE = "http://localhost:8000/api/documents";
+        // ==========================================
+        // REFERENCIAS DOM Y UTILIDADES
+        // ==========================================
+        const loginScreen = document.getElementById('login-screen');
+        const mainApp = document.getElementById('main-app');
+        const loginForm = document.getElementById('login-form');
         
-        // Elementos del DOM
+        // Vistas DBP
+        const viewRag = document.getElementById('view-rag');
+        const viewSystem = document.getElementById('view-system');
+
+        // DOM de Documentos
         const documentsList = document.getElementById('documents-list');
         const loadingState = document.getElementById('loading-state');
         const emptyState = document.getElementById('empty-state');
@@ -129,64 +262,390 @@
         const uploadForm = document.getElementById('upload-form');
         const submitBtn = document.getElementById('submit-btn');
 
-        // Lógica de UI para el Input File
+        // Helper Peticiones Seguras
+        async function fetchWithAuth(url, options = {}) {
+            const headers = { ...options.headers, 'Authorization': `Bearer ${JWT_TOKEN}` };
+            const response = await fetch(url, { ...options, headers });
+            if (response.status === 401 || response.status === 403) {
+                logout();
+                throw new Error('Tu sesión ha expirado. Por favor, ingresa de nuevo.');
+            }
+            return response;
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const isSuccess = type === 'success';
+            const bgColor = isSuccess ? 'bg-[#17243d]' : 'bg-[#ff0000]';
+            const icon = isSuccess ? 'check-circle' : 'alert-circle';
+
+            toast.className = `flex items-center gap-3 ${bgColor} text-white px-5 py-4 rounded-xl shadow-xl toast-enter max-w-sm`;
+            toast.innerHTML = `<i data-lucide="${icon}" class="w-5 h-5 flex-shrink-0"></i><p class="text-sm font-medium leading-snug">${message}</p>`;
+            container.appendChild(toast);
+            lucide.createIcons();
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                toast.style.transition = 'all 0.3s ease-in';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // ==========================================
+        // LÓGICA DE AUTENTICACIÓN Y ROLES
+        // ==========================================
+        async function checkAuth() {
+            if (JWT_TOKEN) {
+                // Parche de seguridad: Si hay token pero no hay usuario guardado (sesión antigua), forzar re-ingreso
+                if (!localStorage.getItem('nexus_user')) {
+                    logout();
+                    return;
+                }
+
+                loginScreen.classList.add('hidden-auth');
+                mainApp.classList.remove('hidden-auth');
+                
+                // Forzar carga de rol y luego renderizar documentos
+                await syncUserRole(); 
+                fetchDocuments();
+            } else {
+                loginScreen.classList.remove('hidden-auth');
+                mainApp.classList.add('hidden-auth');
+            }
+        }
+
+        // Esta función descubre el rol del usuario autenticado consultando el backend.
+        // Si el backend aún no envía el rol, asumiremos que si se llama 'admin' es admin, sino es gestor (por defecto de pruebas).
+        async function syncUserRole() {
+            try {
+                const res = await fetchWithAuth(`${API_BASE}/users`);
+                const udata = await res.json();
+                const username = localStorage.getItem('nexus_user');
+                const me = udata.users.find(u => u.username === username);
+                
+                // Guardamos el rol (si la DB lo trae, sino validamos por nombre "admin")
+                const role = (me && me.role) ? me.role : (username === 'admin' ? 'admin' : 'gestor');
+                localStorage.setItem('nexus_role', role);
+            } catch(e) {
+                console.warn("No se pudo sincronizar el rol. Asumiendo permisos base.");
+            }
+        }
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-login');
+            btn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>';
+            lucide.createIcons();
+            try {
+                const response = await fetch(`${API_BASE}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: document.getElementById('username').value,
+                        password: document.getElementById('password').value
+                    })
+                });
+                if (!response.ok) throw new Error('Credenciales incorrectas');
+                const data = await response.json();
+                
+                JWT_TOKEN = data.access_token;
+                localStorage.setItem('nexus_token', JWT_TOKEN);
+                localStorage.setItem('nexus_user', data.username);
+                
+                showToast(`Bienvenido de nuevo, ${data.username}`, 'success');
+                checkAuth();
+            } catch (error) {
+                showToast(error.message, 'error');
+            } finally {
+                btn.innerHTML = '<span>Ingresar</span><i data-lucide="arrow-right" class="w-4 h-4"></i>';
+                lucide.createIcons();
+            }
+        });
+
+        function logout() {
+            localStorage.removeItem('nexus_token');
+            localStorage.removeItem('nexus_user');
+            localStorage.removeItem('nexus_role');
+            JWT_TOKEN = null;
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            
+            viewSystem.classList.add('hidden');
+            viewRag.classList.remove('hidden');
+            checkAuth();
+            
+            showToast('Sesión cerrada de forma segura', 'success');
+        }
+
+        // ==========================================
+        // LÓGICA DE UI Y MÓDULOS (USUARIOS/LOGS)
+        // ==========================================
+        function toggleSystemView() {
+            if (viewSystem.classList.contains('hidden')) {
+                // Ocultar bloque RAG (Upload + Docs)
+                viewRag.classList.add('hidden');
+                // Mostrar Panel de Sistema
+                viewSystem.classList.remove('hidden');
+                fetchUsers(); 
+            } else {
+                viewSystem.classList.add('hidden');
+                viewRag.classList.remove('hidden');
+                fetchDocuments(); 
+            }
+        }
+
+        function switchTab(tabName) {
+            const btnUsers = document.getElementById('tab-users');
+            const btnLogs = document.getElementById('tab-logs');
+            const contentUsers = document.getElementById('content-users');
+            const contentLogs = document.getElementById('content-logs');
+
+            if(tabName === 'users') {
+                btnUsers.className = "flex-1 py-4 text-center text-sm font-semibold text-[#17243d] border-b-2 border-[#17243d] hover:bg-gray-100 transition-colors flex justify-center items-center gap-2";
+                btnLogs.className = "flex-1 py-4 text-center text-sm font-semibold text-gray-500 border-b-2 border-transparent hover:bg-gray-100 transition-colors flex justify-center items-center gap-2";
+                contentUsers.classList.remove('hidden');
+                contentLogs.classList.add('hidden');
+                fetchUsers();
+            } else {
+                btnLogs.className = "flex-1 py-4 text-center text-sm font-semibold text-[#17243d] border-b-2 border-[#17243d] hover:bg-gray-100 transition-colors flex justify-center items-center gap-2";
+                btnUsers.className = "flex-1 py-4 text-center text-sm font-semibold text-gray-500 border-b-2 border-transparent hover:bg-gray-100 transition-colors flex justify-center items-center gap-2";
+                contentLogs.classList.remove('hidden');
+                contentUsers.classList.add('hidden');
+                fetchLogs();
+            }
+        }
+
+        // Gestión de Usuarios
+        async function fetchUsers() {
+            document.getElementById('users-loading').classList.remove('hidden');
+            const ul = document.getElementById('users-list');
+            ul.innerHTML = '';
+            
+            // Lógica de Permisos para mostrar/ocultar formulario
+            const formContainer = document.getElementById('create-user-form-container');
+            const currentRole = localStorage.getItem('nexus_role');
+            const currentUsername = localStorage.getItem('nexus_user'); // Necesario para no auto-eliminarse
+            
+            if (currentRole === 'admin') {
+                formContainer.style.display = 'block';
+            } else {
+                formContainer.style.display = 'none';
+            }
+
+            try {
+                const res = await fetchWithAuth(`${API_BASE}/users`);
+                if(!res.ok) throw new Error("Error cargando usuarios");
+                const data = await res.json();
+                
+                data.users.forEach(u => {
+                    const rolDisplay = (u.role === 'gestor') ? 'GESTOR' : 'ADMIN';
+                    const bgBadge = (u.role === 'gestor') ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800';
+
+                    // Evitar que el admin activo se elimine a sí mismo
+                    const isCurrentUser = u.username === currentUsername;
+                    
+                    // Solo renderiza el botón de borrar si eres admin y no eres tú mismo
+                    const deleteBtnHtml = (currentRole === 'admin' && !isCurrentUser) 
+                        ? `<button onclick="deleteUser(event, '${u.username}')" class="ml-3 p-1.5 text-gray-400 hover:text-white hover:bg-[#ff0000] rounded-lg transition-colors" title="Eliminar Usuario">
+                               <i data-lucide="trash-2" class="w-4 h-4"></i>
+                           </button>` 
+                        : '';
+
+                    ul.innerHTML += `
+                        <li class="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex items-center gap-3">
+                                <div class="bg-gray-100 p-2.5 rounded-lg text-gray-600">
+                                    <i data-lucide="user" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <p class="font-semibold text-sm text-gray-800">${u.username}</p>
+                                    <p class="text-xs text-gray-500">${u.email || 'Sin correo'}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center">
+                                <span class="${bgBadge} text-[10px] font-bold px-2.5 py-1 rounded-md tracking-wide">${rolDisplay}</span>
+                                ${deleteBtnHtml}
+                            </div>
+                        </li>
+                    `;
+                });
+            } catch (error) {
+                showToast(error.message, 'error');
+            } finally {
+                document.getElementById('users-loading').classList.add('hidden');
+                lucide.createIcons();
+            }
+        }
+
+        async function deleteUser(event, username) {
+            event.stopPropagation();
+            if (!confirm(`¿Estás seguro de que deseas eliminar permanentemente al usuario "${username}"?`)) return;
+            try {
+                // NOTA: Para que esto funcione, la ruta DELETE /api/users/{username} debe existir en el backend api.py
+                const response = await fetchWithAuth(`${API_BASE}/users/${username}`, { method: 'DELETE' });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.detail || 'Error al eliminar el usuario');
+                showToast(result.message || `Usuario ${username} eliminado`, 'success');
+                fetchUsers(); // Refrescar lista de usuarios
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        }
+
+        document.getElementById('create-user-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Validación Manual de Correo
+            const emailValue = document.getElementById('new-email').value.trim();
+            if(!emailValue.endsWith('@epn.edu.ec')) {
+                showToast('El correo debe tener la terminación @epn.edu.ec', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('btn-create-user');
+            btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin mx-auto"></i>';
+            
+            const payload = {
+                username: document.getElementById('new-username').value,
+                email: emailValue,
+                password: document.getElementById('new-password').value,
+                role: document.getElementById('new-role').value // Enviamos el rol seleccionado
+            };
+
+            try {
+                const res = await fetchWithAuth(`${API_BASE}/users`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await res.json();
+                if(!res.ok) throw new Error(result.detail);
+                
+                showToast(result.message, 'success');
+                e.target.reset(); // Limpia formulario
+                fetchUsers(); // Actualiza lista
+            } catch (error) {
+                showToast(error.message, 'error');
+            } finally {
+                btn.innerHTML = 'Crear Usuario';
+            }
+        });
+
+        // Gestión de Logs y Parseo Amigable
+        async function fetchLogs() {
+            document.getElementById('logs-loading').classList.remove('hidden');
+            const tbody = document.getElementById('logs-table-body');
+            tbody.innerHTML = '';
+
+            try {
+                const res = await fetchWithAuth(`${API_BASE}/logs`);
+                if(!res.ok) throw new Error("Error cargando logs");
+                const data = await res.json();
+                
+                data.logs.forEach(log => {
+                    const date = new Date(log.fecha).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'medium' });
+                    
+                    let actionBadge = '';
+                    let detalleTexto = log.detalles || log.documento || '-'; // Compatibilidad con logs antiguos
+
+                    // Parseo del detalle según la acción para que sea legible y amigable
+                    if(log.accion.includes('subio_archivo')) {
+                        actionBadge = '<span class="bg-green-100 text-green-800 text-[10px] font-bold px-2 py-1 rounded tracking-wide">INSERCIÓN</span>';
+                        if(log.detalles) detalleTexto = `Se ha agregado ${log.detalles.replace('Documento: ', '')}`;
+                        else if(log.documento) detalleTexto = `Se ha agregado ${log.documento}`;
+                    }
+                    else if(log.accion.includes('elimino_archivo')) {
+                        actionBadge = '<span class="bg-red-100 text-red-800 text-[10px] font-bold px-2 py-1 rounded tracking-wide">ELIMINACIÓN</span>';
+                        if(log.detalles) detalleTexto = `Se ha borrado ${log.detalles.replace('Documento: ', '')}`;
+                        else if(log.documento) detalleTexto = `Se ha borrado ${log.documento}`;
+                    }
+                    else if(log.accion.includes('creo_usuario')) {
+                        actionBadge = '<span class="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-1 rounded tracking-wide">NUEVO ACCESO</span>';
+                    }
+                    else {
+                        actionBadge = `<span class="bg-gray-100 text-gray-800 text-[10px] font-bold px-2 py-1 rounded tracking-wide">${log.accion}</span>`;
+                    }
+
+                    tbody.innerHTML += `
+                        <tr class="bg-white border-b hover:bg-gray-50 transition-colors">
+                            <td class="px-4 py-3 whitespace-nowrap text-xs text-gray-500">${date}</td>
+                            <td class="px-4 py-3 font-medium text-gray-900">${log.usuario}</td>
+                            <td class="px-4 py-3">${actionBadge}</td>
+                            <td class="px-4 py-3 text-xs text-gray-600">${detalleTexto}</td>
+                        </tr>
+                    `;
+                });
+            } catch (error) {
+                showToast(error.message, 'error');
+            } finally {
+                document.getElementById('logs-loading').classList.add('hidden');
+            }
+        }
+
+        // ==========================================
+        // LÓGICA DE DOCUMENTOS (RAG BASE)
+        // ==========================================
         fileInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
                 const file = e.target.files[0];
                 if (!file.name.endsWith('.txt')) {
-                    showToast('Solo se permiten archivos de texto (.txt)', 'error');
+                    showToast('Solo archivos .txt permitidos', 'error');
                     fileInput.value = '';
                     fileNameDisplay.textContent = 'Haz clic o arrastra un archivo .txt aquí';
                     return;
                 }
                 fileNameDisplay.textContent = file.name;
-                fileNameDisplay.classList.replace('text-gray-700', 'text-[#17243d]');
-                fileNameDisplay.classList.add('font-bold');
+                fileNameDisplay.classList.add('font-bold', 'text-[#17243d]');
             } else {
                 fileNameDisplay.textContent = 'Haz clic o arrastra un archivo .txt aquí';
                 fileNameDisplay.classList.remove('font-bold', 'text-[#17243d]');
             }
         });
 
-        // Obtener documentos
         async function fetchDocuments() {
             loadingState.classList.remove('hidden');
             documentsList.classList.add('hidden');
             emptyState.classList.add('hidden');
 
             try {
-                const response = await fetch(API_BASE);
+                const response = await fetchWithAuth(`${API_BASE}/documents`);
                 if (!response.ok) throw new Error('Error al conectar con la API');
-                
                 const data = await response.json();
                 renderDocuments(data.documents);
             } catch (error) {
-                console.error(error);
-                showToast('Error cargando los documentos', 'error');
+                showToast(error.message, 'error');
                 loadingState.classList.add('hidden');
             }
         }
 
-        // Renderizar lista de documentos
         function renderDocuments(files) {
             loadingState.classList.add('hidden');
             documentsList.innerHTML = '';
-
             if (files.length === 0) {
                 emptyState.classList.remove('hidden');
                 documentsList.classList.add('hidden');
                 return;
             }
-
             emptyState.classList.add('hidden');
             documentsList.classList.remove('hidden');
+
+            // Leer rol para saber si pintamos el botón de borrar
+            const currentRole = localStorage.getItem('nexus_role');
 
             files.forEach((file, index) => {
                 const li = document.createElement('li');
                 li.className = 'bg-gray-50 border border-gray-100 rounded-xl hover:shadow-md transition-shadow group overflow-hidden';
                 
+                // Lógica UI de Permisos: Solo el admin puede ver y clickear el botón de basura
+                const deleteBtnHtml = (currentRole === 'admin') 
+                    ? `<button onclick="deleteDocument(event, '${file}')" class="p-2 text-gray-400 hover:text-white hover:bg-[#ff0000] rounded-lg transition-colors" title="Eliminar Documento">
+                           <i data-lucide="trash-2" class="w-5 h-5"></i>
+                       </button>` 
+                    : '';
+
                 li.innerHTML = `
-                    <!-- Cabecera del Documento (Clickeable para expandir) -->
                     <div class="flex items-center justify-between p-4 cursor-pointer select-none" onclick="toggleDocument('${file}', 'content-${index}', 'icon-${index}')">
                         <div class="flex items-center gap-3 overflow-hidden">
                             <div class="p-2 bg-white rounded-lg shadow-sm text-[#17243d]">
@@ -194,21 +653,17 @@
                             </div>
                             <span class="font-medium text-gray-800 truncate">${file}</span>
                         </div>
-                        
-                        <!-- Botones de Acción -->
                         <div class="flex items-center gap-2">
                             <button onclick="downloadDocument(event, '${file}')" class="p-2 text-gray-400 hover:text-[#17243d] hover:bg-gray-200 rounded-lg transition-colors" title="Descargar Documento">
                                 <i data-lucide="download" class="w-5 h-5"></i>
                             </button>
-                            <button onclick="deleteDocument(event, '${file}')" class="p-2 text-gray-400 hover:text-white hover:bg-[#ff0000] rounded-lg transition-colors" title="Eliminar de la BD">
-                                <i data-lucide="trash-2" class="w-5 h-5"></i>
-                            </button>
+                            
+                            ${deleteBtnHtml}
+                            
                             <div class="w-px h-6 bg-gray-300 mx-1"></div>
                             <i id="icon-${index}" data-lucide="chevron-down" class="w-5 h-5 text-gray-400 transition-transform duration-300"></i>
                         </div>
                     </div>
-
-                    <!-- Contenedor desplegable para el contenido -->
                     <div id="content-${index}" class="hidden border-t border-gray-200 bg-white p-6 max-h-64 overflow-y-auto content-scroll text-sm text-gray-700 whitespace-pre-wrap font-mono" data-loaded="false"></div>
                 `;
                 documentsList.appendChild(li);
@@ -216,42 +671,33 @@
             lucide.createIcons();
         }
 
-        // NUEVO: Función para Desplegar/Cerrar el contenido del archivo
         async function toggleDocument(filename, contentId, iconId) {
             const contentDiv = document.getElementById(contentId);
             const icon = document.getElementById(iconId);
 
             if (contentDiv.classList.contains('hidden')) {
-                // Expandir
                 contentDiv.classList.remove('hidden');
                 icon.classList.add('rotate-180');
-
-                // Si no se ha cargado el contenido antes, hacemos la petición a la API
                 if (contentDiv.dataset.loaded === 'false') {
                     try {
                         contentDiv.innerHTML = '<div class="flex justify-center items-center py-4 text-gray-400"><i data-lucide="loader-2" class="w-6 h-6 animate-spin text-[#17243d]"></i></div>';
                         lucide.createIcons();
-
-                        const response = await fetch(`${API_BASE}/${filename}`);
+                        const response = await fetchWithAuth(`${API_BASE}/documents/${filename}`);
                         if (!response.ok) throw new Error('No se pudo cargar el archivo');
-                        
                         const text = await response.text();
-                        contentDiv.textContent = text; // textContent previene inyección HTML
+                        contentDiv.textContent = text;
                         contentDiv.dataset.loaded = 'true';
                     } catch (error) {
-                        console.error(error);
-                        contentDiv.textContent = '❌ Error al cargar el contenido del documento.';
+                        contentDiv.textContent = '❌ Error de autorización o conexión.';
                         contentDiv.classList.add('text-[#ff0000]');
                     }
                 }
             } else {
-                // Contraer
                 contentDiv.classList.add('hidden');
                 icon.classList.remove('rotate-180');
             }
         }
 
-        // Subir documento
         uploadForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const file = fileInput.files[0];
@@ -260,47 +706,36 @@
             const formData = new FormData();
             formData.append('file', file);
 
-            // Estado de carga
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Indexando en DBs...</span>';
             lucide.createIcons();
 
             try {
-                const response = await fetch(API_BASE, {
+                const response = await fetchWithAuth(`${API_BASE}/documents`, {
                     method: 'POST',
                     body: formData
                 });
-                
                 const result = await response.json();
-                
                 if (!response.ok) throw new Error(result.detail || 'Error al subir archivo');
-
                 showToast(result.message, 'success');
-                
-                // Limpiar form y actualizar lista
                 fileInput.value = '';
                 fileNameDisplay.textContent = 'Haz clic o arrastra un archivo .txt aquí';
                 fileNameDisplay.classList.remove('font-bold', 'text-[#17243d]');
                 fetchDocuments();
-
             } catch (error) {
-                console.error(error);
                 showToast(error.message, 'error');
             } finally {
-                // Restaurar botón
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i data-lucide="cpu" class="w-4 h-4"></i><span>Procesar e Indexar</span>';
                 lucide.createIcons();
             }
         });
 
-        // Descargar documento
         async function downloadDocument(event, filename) {
-            event.stopPropagation(); // Evita que se despliegue el acordeón al hacer clic
+            event.stopPropagation();
             try {
-                const response = await fetch(`${API_BASE}/${filename}`);
-                if (!response.ok) throw new Error('Error al descargar el archivo desde el servidor.');
-
+                const response = await fetchWithAuth(`${API_BASE}/documents/${filename}`);
+                if (!response.ok) throw new Error('Error de autorización al descargar.');
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -310,65 +745,28 @@
                 document.body.appendChild(a);
                 a.click(); 
                 window.URL.revokeObjectURL(url); 
-                
-                showToast(`Documento ${filename} descargado con éxito.`, 'success');
+                showToast(`Descarga iniciada: ${filename}`, 'success');
             } catch (error) {
-                console.error(error);
                 showToast(error.message, 'error');
             }
         }
 
-        // Eliminar documento
         async function deleteDocument(event, filename) {
-            event.stopPropagation(); // Evita que se despliegue el acordeón al hacer clic
-            if (!confirm(`¿Estás seguro de que deseas eliminar "${filename}"? \nAsistente-DBP olvidará toda la información contenida en él.`)) return;
-
+            event.stopPropagation();
+            if (!confirm(`¿Eliminar permanentemente "${filename}"? Esta acción será guardada en los logs de auditoría.`)) return;
             try {
-                const response = await fetch(`${API_BASE}/${filename}`, {
-                    method: 'DELETE'
-                });
-                
+                const response = await fetchWithAuth(`${API_BASE}/documents/${filename}`, { method: 'DELETE' });
                 const result = await response.json();
-                
-                if (!response.ok) throw new Error(result.detail || 'Error al eliminar archivo');
-
+                if (!response.ok) throw new Error(result.detail || 'Error al eliminar');
                 showToast(result.message, 'success');
                 fetchDocuments();
-
             } catch (error) {
-                console.error(error);
                 showToast(error.message, 'error');
             }
         }
 
-        // Sistema de Notificaciones (Toasts)
-        function showToast(message, type = 'success') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            
-            const isSuccess = type === 'success';
-            const bgColor = isSuccess ? 'bg-[#17243d]' : 'bg-[#ff0000]';
-            const icon = isSuccess ? 'check-circle' : 'alert-circle';
-
-            toast.className = `flex items-center gap-3 ${bgColor} text-white px-5 py-4 rounded-xl shadow-xl toast-enter max-w-sm`;
-            toast.innerHTML = `
-                <i data-lucide="${icon}" class="w-5 h-5 flex-shrink-0"></i>
-                <p class="text-sm font-medium leading-snug">${message}</p>
-            `;
-            
-            container.appendChild(toast);
-            lucide.createIcons();
-
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateX(100%)';
-                toast.style.transition = 'all 0.3s ease-in';
-                setTimeout(() => toast.remove(), 300);
-            }, 4000);
-        }
-
-        // Inicializar
-        fetchDocuments();
+        // Arrancar aplicación validando token existente
+        checkAuth();
     </script>
 </body>
 </html>
