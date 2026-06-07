@@ -115,13 +115,6 @@
 </head>
 <body class="relative font-sans antialiased text-[#17243d] h-screen w-screen flex flex-col md:flex-row">
 
-    <!-- Botón de Administración Flotante -->
-    <a href="admin.html" class="absolute top-4 left-4 md:top-6 md:left-6 z-50 flex items-center gap-2 bg-white/90 backdrop-blur-sm border border-gray-200 text-[#17243d] hover:bg-[#17243d] hover:text-white px-3 py-2 md:px-4 md:py-2.5 rounded-lg md:rounded-xl shadow-lg transition-all duration-300 font-medium text-xs md:text-sm group">
-        <i data-lucide="settings" class="w-4 h-4 transition-transform duration-500 group-hover:rotate-90"></i>
-        <span class="hidden md:inline">Panel de Administración</span>
-        <span class="inline md:hidden">Admin</span>
-    </a>
-    
     <!-- Contenedor del Avatar 2D (Godot) -->
     <div id="godot-container">
         <!-- El lienzo transparente de Godot -->
@@ -594,6 +587,23 @@
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault(); 
                 if (!isProcessing) sendMessage(); 
+            }
+        });
+
+        // ==========================================
+        // 5. ACCESO ADMINISTRATIVO OCULTO (EASTER EGG)
+        // ==========================================
+        document.addEventListener('keydown', function(event) {
+            // Verifica si se presionan simultáneamente Ctrl, Shift y la tecla 'A' o 'a'
+            if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'a') {
+                event.preventDefault(); // Evita comportamientos por defecto del navegador
+                
+                // Efecto visual: la pantalla se pondrá azul por un segundo
+                document.body.style.transition = "background-color 0.5s ease";
+                document.body.style.backgroundColor = "#17243d"; 
+                
+                // Redirección directa al Login Seguro
+                window.location.href = 'admin.html';
             }
         });
     </script>

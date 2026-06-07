@@ -67,6 +67,7 @@ class UserCreate(BaseModel):
     username: str
     email: str
     password: str
+    role: str
 
 # ==========================================
 # FUNCIONES DE SEGURIDAD (NATIVAS BCRYPT)
@@ -225,7 +226,13 @@ async def login(req: LoginRequest):
 
 @app.post("/api/users")
 async def create_user(user: UserCreate, current_user: str = Depends(get_current_user)):
-    """Crea un nuevo usuario asegurando el correo institucional."""
+    """Crea un nuevo usuario asegurando el correo institucional y roles."""
+    
+    # 1. Validar permisos de quien ejecuta la acción (Debe ser admin)
+    current_user_data = mongo_users.find_one({"username": current_user})
+    if not current_user_data or current_user_data.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo los administradores pueden crear nuevos usuarios")
+
     if not user.email.endswith("@epn.edu.ec"):
         raise HTTPException(status_code=400, detail="El correo debe tener la terminación institucional @epn.edu.ec")
     
@@ -240,10 +247,10 @@ async def create_user(user: UserCreate, current_user: str = Depends(get_current_
         "username": user.username,
         "email": user.email,
         "password": hashed_pwd,
-        "role": "admin"
+        "role": user.role
     })
     
-    log_audit(current_user, "creo_usuario", f"Registró a {user.username} ({user.email})")
+    log_audit(current_user, "creo_usuario", f"Registró a {user.username} ({user.email}) como {user.role.upper()}")
     return {"message": "Usuario creado exitosamente"}
 
 @app.get("/api/users")
@@ -263,6 +270,30 @@ async def get_logs(current_user: str = Depends(get_current_user)):
         return {"logs": logs}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/users/{username_to_delete}")
+async def delete_user(username_to_delete: str, current_user: str = Depends(get_current_user)):
+    """Elimina un usuario de la base de datos (Requiere rol admin)."""
+    if mongo_users is None:
+        raise HTTPException(status_code=500, detail="Base de datos no conectada")
+        
+    # 1. Verificar que el usuario actual sea administrador
+    current_user_data = mongo_users.find_one({"username": current_user})
+    if not current_user_data or current_user_data.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="No tienes permisos para eliminar usuarios.")
+        
+    # 2. Prevenir auto-eliminación por seguridad
+    if current_user == username_to_delete:
+        raise HTTPException(status_code=400, detail="Medida de seguridad: No puedes eliminar tu propio usuario.")
+        
+    # 3. Eliminar usuario
+    result = mongo_users.delete_one({"username": username_to_delete})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado.")
+        
+    # 4. Registrar en auditoría
+    log_audit(current_user, "elimino_usuario", f"Se eliminó el acceso del usuario '{username_to_delete}'")
+    return {"message": f"Usuario {username_to_delete} eliminado con éxito."}
 
 # ==========================================
 # ENDPOINTS DE ADMINISTRACIÓN (PROTEGIDOS)

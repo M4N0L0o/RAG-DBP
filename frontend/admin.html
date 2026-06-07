@@ -35,6 +35,12 @@
                 </div>
                 <h1 class="text-2xl font-bold text-[#17243d]">Acceso Seguro</h1>
                 <p class="text-sm text-gray-500 mt-1">Gestión de Conocimiento DBP</p>
+                
+                <!-- Contenedor para el mensaje de error de login -->
+                <div id="login-error-message" class="hidden w-full mt-4 p-3 bg-red-50 border border-red-200 text-red-600 text-sm text-center rounded-lg flex items-center justify-center gap-2">
+                    <i data-lucide="alert-circle" class="w-4 h-4"></i>
+                    <span id="login-error-text">Usuario o contraseña incorrectos.</span>
+                </div>
             </div>
 
             <form id="login-form" class="space-y-5">
@@ -248,6 +254,8 @@
         const loginScreen = document.getElementById('login-screen');
         const mainApp = document.getElementById('main-app');
         const loginForm = document.getElementById('login-form');
+        const loginErrorMessage = document.getElementById('login-error-message');
+        const loginErrorText = document.getElementById('login-error-text');
         
         // Vistas DBP
         const viewRag = document.getElementById('view-rag');
@@ -305,6 +313,7 @@
 
                 loginScreen.classList.add('hidden-auth');
                 mainApp.classList.remove('hidden-auth');
+                loginErrorMessage.classList.add('hidden'); // Ocultar mensaje de error si está visible
                 
                 // Forzar carga de rol y luego renderizar documentos
                 await syncUserRole(); 
@@ -336,7 +345,9 @@
             e.preventDefault();
             const btn = document.getElementById('btn-login');
             btn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>';
+            loginErrorMessage.classList.add('hidden'); // Ocultar error al intentar loguearse
             lucide.createIcons();
+            
             try {
                 const response = await fetch(`${API_BASE}/login`, {
                     method: 'POST',
@@ -346,7 +357,12 @@
                         password: document.getElementById('password').value
                     })
                 });
-                if (!response.ok) throw new Error('Credenciales incorrectas');
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Usuario o contraseña incorrectos');
+                }
+                
                 const data = await response.json();
                 
                 JWT_TOKEN = data.access_token;
@@ -356,7 +372,14 @@
                 showToast(`Bienvenido de nuevo, ${data.username}`, 'success');
                 checkAuth();
             } catch (error) {
-                showToast(error.message, 'error');
+                // Mostrar el mensaje de error visualmente y limpiar campos
+                loginErrorText.textContent = error.message;
+                loginErrorMessage.classList.remove('hidden');
+                document.getElementById('username').value = '';
+                document.getElementById('password').value = '';
+                document.getElementById('username').focus(); // Devolver el foco al primer campo
+                
+                // showToast(error.message, 'error'); // Opcional: mostrar también el toast si lo deseas
             } finally {
                 btn.innerHTML = '<span>Ingresar</span><i data-lucide="arrow-right" class="w-4 h-4"></i>';
                 lucide.createIcons();
