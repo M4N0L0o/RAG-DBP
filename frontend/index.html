@@ -115,6 +115,19 @@
 </head>
 <body class="relative font-sans antialiased text-[#17243d] h-screen w-screen flex flex-col md:flex-row">
 
+    <!-- Selector de Skins (Flotante, arriba centrado móvil, arriba izquierda desktop) -->
+    <div class="absolute top-4 left-1/2 -translate-x-1/2 md:left-6 md:translate-x-0 z-50">
+        <div class="bg-white/95 backdrop-blur-md border border-gray-200 rounded-xl shadow-lg px-3 py-2 flex items-center gap-2 transition-all hover:shadow-xl cursor-pointer">
+            <i data-lucide="shirt" class="w-4 h-4 text-[#17243d]"></i>
+            <select id="skin-selector" class="bg-transparent border-none text-xs md:text-sm font-bold text-[#17243d] focus:outline-none focus:ring-0 cursor-pointer outline-none">
+                <option value="skin1">Bata médica</option>
+                <option value="skin2">EPN</option>
+                <option value="skin3">Traje</option>
+                <option value="skin4">FIS</option>
+            </select>
+        </div>
+    </div>
+
     <!-- Contenedor del Avatar 2D (Godot) -->
     <div id="godot-container">
         <!-- El lienzo transparente de Godot -->
@@ -240,7 +253,23 @@
         }
 
         // ==========================================
-        // 2. CONFIGURACIÓN DE VOZ (TEXT-TO-SPEECH)
+        // 2. CONTROL DE SKINS
+        // ==========================================
+        const skinSelector = document.getElementById('skin-selector');
+        
+        skinSelector.addEventListener('change', (e) => {
+            const selectedSkin = e.target.value;
+            // Verificar si el motor Godot ya inyectó la función en window
+            if (typeof window.godotReceiveSkin === 'function') {
+                window.godotReceiveSkin(selectedSkin);
+                console.log("Cambiando skin a:", selectedSkin);
+            } else {
+                console.warn("Godot Engine aún no ha cargado la interfaz de skins.");
+            }
+        });
+
+        // ==========================================
+        // 3. CONFIGURACIÓN DE VOZ (TEXT-TO-SPEECH)
         // ==========================================
         let isAudioEnabled = true;
         let ttsVoice = null;
@@ -302,7 +331,7 @@
         }
 
         // ==========================================
-        // 3. RECONOCIMIENTO DE VOZ Y LÓGICA UI
+        // 4. RECONOCIMIENTO DE VOZ Y LÓGICA UI
         // ==========================================
         const chatHistory = document.getElementById('chat-history');
         const userInput = document.getElementById('user-input');
@@ -388,7 +417,7 @@
         }
 
         // ==========================================
-        // 4. LÓGICA DE INTERACCIÓN Y STREAMING
+        // 5. LÓGICA DE INTERACCIÓN Y STREAMING
         // ==========================================
         let currentAbortController = null;
         let displayQueue = ""; 
@@ -591,7 +620,7 @@
         });
 
         // ==========================================
-        // 5. ACCESO ADMINISTRATIVO OCULTO (EASTER EGG)
+        // 6. ACCESO ADMINISTRATIVO OCULTO (EASTER EGG)
         // ==========================================
         document.addEventListener('keydown', function(event) {
             // Verifica si se presionan simultáneamente Ctrl, Shift y la tecla 'A' o 'a'
